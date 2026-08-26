@@ -424,3 +424,22 @@ enum class Color { RED, GREEN }
         (identifier))
       (enum_entry
         (identifier)))))
+
+================================
+Dangling annotation at end of file
+================================
+
+val x = 1
+
+@Ann
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (ERROR
+    (annotation
+      (user_type
+        (identifier)))))
