@@ -1495,6 +1495,29 @@
     }
   },
   {
+    "type": "multi_dollar_string_literal",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "escape_sequence",
+          "named": true
+        },
+        {
+          "type": "interpolation",
+          "named": true
+        },
+        {
+          "type": "string_content",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "multi_variable_declaration",
     "named": true,
     "fields": {},
@@ -2926,10 +2949,6 @@
   },
   {
     "type": "line_comment",
-    "named": true
-  },
-  {
-    "type": "multi_dollar_string_literal",
     "named": true
   },
   {

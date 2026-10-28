@@ -90,6 +90,15 @@ module.exports = grammar({
     'set',
     // used to check if we can parse a comment
     '$',
+    // Multi-dollar strings: the scanner counts the dollars that open the string, because only that many dollars in
+    // a row start a template (see `multi_dollar_string_literal`).
+    $._multi_dollar_string_start,
+    $._multi_dollar_string_content,
+    $._multi_dollar_interpolation_start,
+    $._multi_dollar_interpolation_brace_start,
+    $._multi_dollar_string_end,
+    // never used by a rule: the scanner reads it to tell error recovery from a normal parse
+    $._error_sentinel,
   ],
 
   inline: $ => [
@@ -976,13 +985,24 @@ module.exports = grammar({
       choice('"""', '""""'),
     ),
 
-    // `$$"..."` and `$$"""..."""` (Kotlin 2.2 multi-dollar interpolation): with a prefix of n dollars a lone `$`
-    // is plain text and only n dollars start a template. The whole literal is one token, so the templates in it
-    // are not separated, and a quote inside a `$${...}` template ends the literal early.
-    multi_dollar_string_literal: _ => token(choice(
-      seq(/\$\$+/, '"""', repeat(choice(/[^"]/, seq(/"{1,2}/, /[^"]/))), '"""', repeat('"')),
-      seq(/\$\$+/, '"', repeat(choice(/[^"\\\n]/, /\\./)), '"'),
-    )),
+    // `$$"..."` and `$$"""..."""` (Kotlin 2.2 multi-dollar interpolation): with a prefix of n dollars, only n
+    // dollars in a row followed by a name or `{` start a template, and fewer dollars are text. The scanner counts
+    // the dollars of the prefix, so the string has the children of the other string literals: `string_content`,
+    // `escape_sequence` (single-line strings) and `interpolation`.
+    multi_dollar_string_literal: $ => seq(
+      $._multi_dollar_string_start,
+      repeat(choice(
+        alias($._multi_dollar_string_content, $.string_content),
+        $.escape_sequence,
+        alias($._multi_dollar_interpolation, $.interpolation),
+      )),
+      $._multi_dollar_string_end,
+    ),
+
+    _multi_dollar_interpolation: $ => choice(
+      seq(alias($._multi_dollar_interpolation_start, '$'), $._identifier),
+      seq(alias($._multi_dollar_interpolation_brace_start, '${'), $.expression, '}'),
+    ),
 
     interpolation: $ => choice(
       seq('$', $._identifier),

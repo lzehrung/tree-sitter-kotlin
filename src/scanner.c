@@ -1,3 +1,4 @@
+#include "tree_sitter/alloc.h"
 #include "tree_sitter/parser.h"
 
 #include <string.h>
@@ -15,6 +16,12 @@ enum TokenType {
     GET,
     SET,
     DOLLAR,
+    MD_STRING_START,
+    MD_STRING_CONTENT,
+    MD_INTERPOLATION,
+    MD_INTERPOLATION_BRACE,
+    MD_STRING_END,
+    ERROR_SENTINEL,
 };
 
 #define MAX_WORD_SIZE 16
@@ -97,15 +104,186 @@ static inline bool primary_constructor_may_follow(const bool *valid_symbols) {
     return valid_symbols[CONSTRUCTOR] && !valid_symbols[GET] && !valid_symbols[SET];
 }
 
-void *tree_sitter_kotlin_external_scanner_create() { return NULL; }
+// A multi-dollar string (`$$"..."`, `$$"""..."""`) is a string with a template prefix of two or more dollars: only that
+// many dollars in a row, followed by a name or `{`, start a template, and a run of fewer dollars is text. The scanner
+// has to know the count while it reads the text, so it keeps one entry per open multi-dollar string: the dollar
+// count, with bit 7 set for a triple-quoted string. Strings nest through templates (`$${ f($$"...") }`). The entries
+// are the serialized state, so a parse that backtracks gets the entries of the token it backtracks to.
+#define MD_MAX_DEPTH 32
+#define MD_RAW 0x80
+#define MD_MAX_DOLLARS 0x7f
 
-void tree_sitter_kotlin_external_scanner_destroy(void *payload) {}
+typedef struct {
+    uint8_t depth;
+    uint8_t open[MD_MAX_DEPTH];
+} Scanner;
 
-unsigned tree_sitter_kotlin_external_scanner_serialize(void *payload, char *buffer) { return 0; }
+void *tree_sitter_kotlin_external_scanner_create() { return ts_calloc(1, sizeof(Scanner)); }
 
-void tree_sitter_kotlin_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {}
+void tree_sitter_kotlin_external_scanner_destroy(void *payload) { ts_free(payload); }
+
+unsigned tree_sitter_kotlin_external_scanner_serialize(void *payload, char *buffer) {
+    Scanner *scanner = (Scanner *)payload;
+    if (scanner->depth > 0) {
+        memcpy(buffer, scanner->open, scanner->depth);
+    }
+    return scanner->depth;
+}
+
+void tree_sitter_kotlin_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
+    Scanner *scanner = (Scanner *)payload;
+    scanner->depth = 0;
+    if (length > 0 && length <= MD_MAX_DEPTH) {
+        memcpy(scanner->open, buffer, length);
+        scanner->depth = (uint8_t)length;
+    }
+}
+
+// The first character of a name after the dollars of a template. Only ASCII letters and `_` count: `iswalpha` gives
+// different answers for other characters on different platforms, and a name that starts with another letter is read as
+// text, which is the conservative reading.
+static inline bool is_identifier_start(int32_t c) {
+    return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+// At a `$` where a value can start: the opening of a multi-dollar string, `$$"` or `$$"""` with any number of dollars
+// from two. The token is the prefix and the opening quotes.
+static bool scan_multi_dollar_start(Scanner *scanner, TSLexer *lexer) {
+    unsigned dollars = 0;
+    while (lexer->lookahead == '$') {
+        advance(lexer);
+        dollars++;
+    }
+    if (dollars < 2 || dollars > MD_MAX_DOLLARS || lexer->lookahead != '"' || scanner->depth == MD_MAX_DEPTH) {
+        return false;
+    }
+    advance(lexer);
+    lexer->mark_end(lexer);
+    bool raw = false;
+    if (lexer->lookahead == '"') {
+        advance(lexer);
+        if (lexer->lookahead == '"') {
+            advance(lexer);
+            lexer->mark_end(lexer);
+            raw = true;
+        }
+    }
+    scanner->open[scanner->depth++] = (uint8_t)(dollars | (raw ? MD_RAW : 0));
+    lexer->result_symbol = MD_STRING_START;
+    return true;
+}
+
+// Inside a multi-dollar string, one token per call: a template start, the end of the string, or text. Text stops
+// before whatever the grammar reads itself (a template, an escape sequence, the end), and the next call returns that.
+// The lexer can mark the end of a token only where it stands, so a run of `$` or `"` is measured by reading it, and
+// when its leading characters are text and the rest is not, they are returned one per call.
+static bool scan_multi_dollar_part(Scanner *scanner, TSLexer *lexer) {
+    const uint8_t open = scanner->open[scanner->depth - 1];
+    const unsigned dollars = open & MD_MAX_DOLLARS;
+    const bool raw = (open & MD_RAW) != 0;
+    bool has_text = false;
+
+    for (;;) {
+        if (lexer->eof(lexer)) {
+            // An unterminated string: the text up to the end of the input.
+            lexer->mark_end(lexer);
+            lexer->result_symbol = MD_STRING_CONTENT;
+            return has_text;
+        }
+
+        const int32_t c = lexer->lookahead;
+
+        if (c == '$') {
+            // The text ends before a run of dollars, unless the run is text too.
+            lexer->mark_end(lexer);
+            unsigned run = 0;
+            if (!has_text) {
+                advance(lexer);
+                run = 1;
+                lexer->mark_end(lexer);
+            }
+            while (lexer->lookahead == '$') {
+                advance(lexer);
+                run++;
+            }
+            if (run >= dollars && (lexer->lookahead == '{' || is_identifier_start(lexer->lookahead))) {
+                if (has_text || run > dollars) {
+                    lexer->result_symbol = MD_STRING_CONTENT;
+                    return true;
+                }
+                const bool brace = lexer->lookahead == '{';
+                if (brace) {
+                    advance(lexer);
+                }
+                lexer->mark_end(lexer);
+                lexer->result_symbol = brace ? MD_INTERPOLATION_BRACE : MD_INTERPOLATION;
+                return true;
+            }
+            has_text = true;
+            continue;
+        }
+
+        if (c == '"') {
+            lexer->mark_end(lexer);
+            if (!raw) {
+                if (has_text) {
+                    lexer->result_symbol = MD_STRING_CONTENT;
+                    return true;
+                }
+                advance(lexer);
+                lexer->mark_end(lexer);
+                scanner->depth--;
+                lexer->result_symbol = MD_STRING_END;
+                return true;
+            }
+            // A triple-quoted string ends at the last three quotes of a run, the quotes before them are text.
+            unsigned run = 0;
+            if (!has_text) {
+                advance(lexer);
+                run = 1;
+                lexer->mark_end(lexer);
+            }
+            while (lexer->lookahead == '"') {
+                advance(lexer);
+                run++;
+            }
+            if (run >= 3) {
+                if (has_text || run > 3) {
+                    lexer->result_symbol = MD_STRING_CONTENT;
+                    return true;
+                }
+                lexer->mark_end(lexer);
+                scanner->depth--;
+                lexer->result_symbol = MD_STRING_END;
+                return true;
+            }
+            has_text = true;
+            continue;
+        }
+
+        if (!raw && (c == '\\' || c == '\n' || c == '\r')) {
+            // The grammar reads an escape sequence, and a line break cannot be part of a single-line string.
+            if (!has_text) {
+                return false;
+            }
+            lexer->mark_end(lexer);
+            lexer->result_symbol = MD_STRING_CONTENT;
+            return true;
+        }
+
+        advance(lexer);
+        has_text = true;
+    }
+}
 
 bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
+    // During error recovery every symbol is valid; the multi-dollar tokens are left to a normal parse, because
+    // reading them there would push and pop entries for tokens that may be thrown away.
+    if (!valid_symbols[ERROR_SENTINEL] && ((Scanner *)payload)->depth > 0 &&
+        (valid_symbols[MD_STRING_CONTENT] || valid_symbols[MD_STRING_END])) {
+        return scan_multi_dollar_part((Scanner *)payload, lexer);
+    }
+
     if (valid_symbols[MULTILINE_STRING_CONTENT]) {
         bool did_advance = false;
         lexer->result_symbol = MULTILINE_STRING_CONTENT;
@@ -242,6 +420,12 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                 // this yields a zero-width semicolon before `}`.
                 case '}':
                     return true;
+                // A value can follow on the same line where a statement may also end (`return $$"..."`).
+                case '$':
+                    if (valid_symbols[MD_STRING_START] && !valid_symbols[ERROR_SENTINEL]) {
+                        return scan_multi_dollar_start((Scanner *)payload, lexer);
+                    }
+                    return false;
                 default:
                     return false;
             }
@@ -481,6 +665,10 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
 
     while (iswspace(lexer->lookahead)) {
         skip(lexer);
+    }
+
+    if (valid_symbols[MD_STRING_START] && !valid_symbols[ERROR_SENTINEL] && lexer->lookahead == '$') {
+        return scan_multi_dollar_start((Scanner *)payload, lexer);
     }
 
     if (valid_symbols[NOT_IS]) {

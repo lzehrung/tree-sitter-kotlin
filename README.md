@@ -27,7 +27,9 @@
 > - a primary constructor on the line after a class header, also with `private`, `internal actual` or an annotation before it
 > - an annotated accessor after a property without a type
 > - `dynamic`, `final` and `override` as identifiers, and `by` as a name at the start of a statement
-> - multi-dollar string literals (`$$"..."`), as the new node `multi_dollar_string_literal`
+> - multi-dollar string literals (`$$"..."`, `$$"""..."""`): the new node `multi_dollar_string_literal` has `string_content`,
+>   `escape_sequence` and `interpolation` children like the other strings. Only as many dollars in a row as the prefix has start a
+>   template (`$$name`, `$${expr}`), fewer are text. The scanner keeps the dollar count of each open string as state.
 > - a trailing comma in an index expression, and an empty collection literal `[]`
 > - a NUL character inside a block comment
 >

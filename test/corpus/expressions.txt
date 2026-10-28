@@ -693,76 +693,6 @@ final class Top
     (identifier)))
 
 ========================================
-Multi-dollar string literals
-========================================
-
-val a = $$"?(@.team == $team)"
-val b = $$"""{"team": "$name"}"""
-val c = $$$"$$price"
-val d = $$"{\"$foo\": \"bar\"}"
-val e = $$"a $${b} c"
-val f = $$"""
-  {
-    "$schema": "x",
-    "$id": "$${id}"
-  }
-  """.trimIndent()
-val g = foo($$"x", "y")
-val h = $$""""quoted""""
-val i = $$""
-
----
-
-(source_file
-  (property_declaration
-    (variable_declaration
-      (identifier))
-    (multi_dollar_string_literal))
-  (property_declaration
-    (variable_declaration
-      (identifier))
-    (multi_dollar_string_literal))
-  (property_declaration
-    (variable_declaration
-      (identifier))
-    (multi_dollar_string_literal))
-  (property_declaration
-    (variable_declaration
-      (identifier))
-    (multi_dollar_string_literal))
-  (property_declaration
-    (variable_declaration
-      (identifier))
-    (multi_dollar_string_literal))
-  (property_declaration
-    (variable_declaration
-      (identifier))
-    (call_expression
-      (navigation_expression
-        (multi_dollar_string_literal)
-        (identifier))
-      (value_arguments)))
-  (property_declaration
-    (variable_declaration
-      (identifier))
-    (call_expression
-      (identifier)
-      (value_arguments
-        (value_argument
-          (multi_dollar_string_literal))
-        (value_argument
-          (string_literal
-            (string_content))))))
-  (property_declaration
-    (variable_declaration
-      (identifier))
-    (multi_dollar_string_literal))
-  (property_declaration
-    (variable_declaration
-      (identifier))
-    (multi_dollar_string_literal)))
-
-========================================
 Trailing comma in an index expression
 ========================================
 
@@ -978,6 +908,385 @@ class Y
               (collection_literal
                 (number_literal)))))))
     (identifier)))
+
+========================================
+Multi-dollar string literals
+========================================
+
+val a = $$"?(@.team == $team)"
+val b = $$"""{"team": "$name"}"""
+val c = $$$"$$price"
+val d = $$"{\"$foo\": \"bar\"}"
+val e = $$"a $${b} c"
+val f = $$"""
+  {
+    "$schema": "x",
+    "$id": "$${id}"
+  }
+  """.trimIndent()
+val g = foo($$"x", "y")
+val h = $$""""quoted""""
+val i = $$""
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (escape_sequence)
+      (string_content)
+      (escape_sequence)
+      (string_content)
+      (escape_sequence)
+      (string_content)
+      (escape_sequence)
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (call_expression
+      (navigation_expression
+        (multi_dollar_string_literal
+          (string_content)
+          (interpolation
+            (identifier))
+          (string_content))
+        (identifier))
+      (value_arguments)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (call_expression
+      (identifier)
+      (value_arguments
+        (value_argument
+          (multi_dollar_string_literal
+            (string_content)))
+        (value_argument
+          (string_literal
+            (string_content))))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal)))
+
+========================================
+Multi-dollar string templates
+========================================
+
+val a = $$"?(@.team == $team)"
+val b = $$"a $${target} b $$name c"
+val c = $$"$${x}$$y"
+val d = $$"{\"$foo\": \"bar\"}\n"
+val e = $$"$$$count $$"
+val f = $$$"$$price $$$price $${x}"
+val g = $$""
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (interpolation
+        (identifier))
+      (interpolation
+        (identifier))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (escape_sequence)
+      (string_content)
+      (escape_sequence)
+      (string_content)
+      (escape_sequence)
+      (string_content)
+      (escape_sequence)
+      (string_content)
+      (escape_sequence)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal)))
+
+========================================
+Multi-dollar raw string templates
+========================================
+
+val a = $$"""
+  {
+    "$schema": "https://x",
+    "title": "$${simpleName ?: "unknown"}",
+    "id": "$$id"
+  }
+  """.trimIndent()
+val b = $$"""x $${p.q} y $z"""
+val c = $$""""quoted""""
+val d = $$"""a""b"""
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (call_expression
+      (navigation_expression
+        (multi_dollar_string_literal
+          (string_content)
+          (interpolation
+            (binary_expression
+              (identifier)
+              (string_literal
+                (string_content))))
+          (string_content)
+          (interpolation
+            (identifier))
+          (string_content))
+        (identifier))
+      (value_arguments)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (interpolation
+        (navigation_expression
+          (identifier)
+          (identifier)))
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content))))
+
+=========================================
+Multi-dollar strings nested in a template
+=========================================
+
+val a = $$"outer $${ format($$$"inner $$$x $$y", z) } end $$tail"
+val b = "plain $$c ${d}"
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (interpolation
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (multi_dollar_string_literal
+                (string_content)
+                (interpolation
+                  (identifier))
+                (string_content)))
+            (value_argument
+              (identifier)))))
+      (string_content)
+      (interpolation
+        (identifier))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (string_literal
+      (string_content)
+      (string_content)
+      (string_content)
+      (string_content)
+      (interpolation
+        (identifier)))))
+
+========================================
+Multi-dollar strings in expressions
+========================================
+
+fun f(x: Int): String {
+    $$"a $${b} c".length
+    val y = if (x > 0) $$"pos $${x}" else $$"neg $$x"
+    val z = listOf($$"a", $$"b $${ mapOf("}" to 1)["}"] }")
+    when (x) { 1 -> $$"one" else -> $$"many $${ "inner ${x}" } done" }
+    return $$"result $${y} $$z"
+}
+
+fun g() {
+    return
+    $$"separate $${statement}"
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (user_type
+          (identifier))))
+    (user_type
+      (identifier))
+    (function_body
+      (block
+        (navigation_expression
+          (multi_dollar_string_literal
+            (string_content)
+            (interpolation
+              (identifier))
+            (string_content))
+          (identifier))
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (if_expression
+            (binary_expression
+              (identifier)
+              (number_literal))
+            (multi_dollar_string_literal
+              (string_content)
+              (interpolation
+                (identifier)))
+            (multi_dollar_string_literal
+              (string_content)
+              (interpolation
+                (identifier)))))
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (call_expression
+            (identifier)
+            (value_arguments
+              (value_argument
+                (multi_dollar_string_literal
+                  (string_content)))
+              (value_argument
+                (multi_dollar_string_literal
+                  (string_content)
+                  (interpolation
+                    (index_expression
+                      (call_expression
+                        (identifier)
+                        (value_arguments
+                          (value_argument
+                            (infix_expression
+                              (string_literal
+                                (string_content))
+                              (identifier)
+                              (number_literal)))))
+                      (string_literal
+                        (string_content)))))))))
+        (when_expression
+          (when_subject
+            (identifier))
+          (when_entry
+            (number_literal)
+            (multi_dollar_string_literal
+              (string_content)))
+          (when_entry
+            (multi_dollar_string_literal
+              (string_content)
+              (interpolation
+                (string_literal
+                  (string_content)
+                  (interpolation
+                    (identifier))))
+              (string_content))))
+        (return_expression
+          (multi_dollar_string_literal
+            (string_content)
+            (interpolation
+              (identifier))
+            (string_content)
+            (interpolation
+              (identifier)))))))
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (return_expression)
+        (multi_dollar_string_literal
+          (string_content)
+          (interpolation
+            (identifier)))))))
 
 ========================================
 A NUL character inside a block comment
