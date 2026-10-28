@@ -878,3 +878,148 @@ class Outer {
               (identifier))))
         (constructor_delegation_call
           (value_arguments))))))
+
+========================================================
+Primary constructor with platform modifiers on a newline
+========================================================
+
+actual open class ByteString
+internal actual constructor(
+  internal actual val data: ByteArray,
+) : Comparable<ByteString> {
+  fun size() = data.size
+}
+
+class Outer {
+  expect class Inner
+  internal expect constructor(
+    val a: Int,
+  )
+
+  val x = 1
+  internal actual constructor() : this()
+  actual fun f() {}
+}
+
+---
+
+(source_file
+  (class_declaration
+    (modifiers
+      (platform_modifier)
+      (inheritance_modifier))
+    (identifier)
+    (primary_constructor
+      (modifiers
+        (visibility_modifier)
+        (platform_modifier))
+      (class_parameters
+        (class_parameter
+          (modifiers
+            (visibility_modifier)
+            (platform_modifier))
+          (identifier)
+          (user_type
+            (identifier)))))
+    (delegation_specifiers
+      (delegation_specifier
+        (user_type
+          (identifier)
+          (type_arguments
+            (type_projection
+              (user_type
+                (identifier)))))))
+    (class_body
+      (function_declaration
+        (identifier)
+        (function_value_parameters)
+        (function_body
+          (navigation_expression
+            (identifier)
+            (identifier))))))
+  (class_declaration
+    (identifier)
+    (class_body
+      (class_declaration
+        (modifiers
+          (platform_modifier))
+        (identifier)
+        (primary_constructor
+          (modifiers
+            (visibility_modifier)
+            (platform_modifier))
+          (class_parameters
+            (class_parameter
+              (identifier)
+              (user_type
+                (identifier))))))
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal))
+      (secondary_constructor
+        (modifiers
+          (visibility_modifier)
+          (platform_modifier))
+        (function_value_parameters)
+        (constructor_delegation_call
+          (value_arguments)))
+      (function_declaration
+        (modifiers
+          (platform_modifier))
+        (identifier)
+        (function_value_parameters)
+        (function_body
+          (block))))))
+
+==========================================================
+Identifiers named actual and expect at the start of a line
+==========================================================
+
+fun check(actual: Int, expect: Set<Int>) {
+    val x = actual
+    actual as Number
+    expect in setOf(1)
+    println(x)
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (user_type
+          (identifier)))
+      (parameter
+        (identifier)
+        (user_type
+          (identifier)
+          (type_arguments
+            (type_projection
+              (user_type
+                (identifier)))))))
+    (function_body
+      (block
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (identifier))
+        (as_expression
+          (identifier)
+          (user_type
+            (identifier)))
+        (in_expression
+          (identifier)
+          (call_expression
+            (identifier)
+            (value_arguments
+              (value_argument
+                (number_literal)))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))))))

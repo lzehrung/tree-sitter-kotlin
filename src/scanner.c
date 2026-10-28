@@ -310,11 +310,16 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
             case 'c':
             case 'b':
             case 'w':
+                // `actual` and `expect` can precede a primary constructor (`internal actual constructor(`), so they
+                // count as modifiers there. Elsewhere they are ordinary names (`actual as T`, `expect in xs`) and
+                // must not hide the word that follows them.
                 while (scan_words(lexer,
                                   (const char[16][16]){"public", "private", "protected", "internal", "abstract",
                                                        "final", "open", "override", "lateinit", "vararg", "noinline",
                                                        "crossinline", "external", "suspend", "inline"},
-                                  scanned_word, NULL)) {
+                                  scanned_word, NULL) ||
+                       (primary_constructor_may_follow(valid_symbols) &&
+                        scan_words(lexer, (const char[16][16]){"actual", "expect"}, scanned_word, NULL))) {
                     memset(scanned_word, 0, MAX_WORD_SIZE);
                     while (iswspace(lexer->lookahead)) {
                         skip(lexer);
