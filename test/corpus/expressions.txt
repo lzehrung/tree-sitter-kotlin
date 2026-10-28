@@ -978,3 +978,29 @@ class Y
               (collection_literal
                 (number_literal)))))))
     (identifier)))
+
+========================================
+A NUL character inside a block comment
+========================================
+
+class SpecConformanceTest {
+    /*
+     * ["a a"], n_string_unescaped_crtl_char.json // p.3
+     * [-], n_array_just_minus.json // p.1
+     */
+    private val default = Json
+}
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (block_comment)
+      (property_declaration
+        (modifiers
+          (visibility_modifier))
+        (variable_declaration
+          (identifier))
+        (identifier)))))

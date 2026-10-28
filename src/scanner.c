@@ -547,7 +547,13 @@ comment:
         for (;;) {
             switch (lexer->lookahead) {
                 case '\0':
-                    return false;
+                    // A NUL byte inside the comment is ordinary text; only the end of the input ends the scan.
+                    if (lexer->eof(lexer)) {
+                        return false;
+                    }
+                    advance(lexer);
+                    after_star = false;
+                    break;
                 case '*':
                     advance(lexer);
                     after_star = true;
