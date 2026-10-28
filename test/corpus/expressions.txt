@@ -831,3 +831,84 @@ val g = h[1, 2]
       (identifier)
       (number_literal)
       (number_literal))))
+
+========================================
+A call to a function named override
+========================================
+
+fun t() {
+    single<Simple.A> { Simple.B() } withOptions {
+        override()
+    }
+    override(1, 2)
+    override = 3
+}
+
+class A {
+    override fun f() {}
+    override val v = 1
+    open override fun g() {}
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (infix_expression
+          (call_expression
+            (identifier)
+            (type_arguments
+              (type_projection
+                (user_type
+                  (identifier)
+                  (identifier))))
+            (annotated_lambda
+              (lambda_literal
+                (call_expression
+                  (navigation_expression
+                    (identifier)
+                    (identifier))
+                  (value_arguments)))))
+          (identifier)
+          (lambda_literal
+            (call_expression
+              (identifier)
+              (value_arguments))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (number_literal))
+            (value_argument
+              (number_literal))))
+        (assignment
+          (identifier)
+          (number_literal)))))
+  (class_declaration
+    (identifier)
+    (class_body
+      (function_declaration
+        (modifiers
+          (member_modifier))
+        (identifier)
+        (function_value_parameters)
+        (function_body
+          (block)))
+      (property_declaration
+        (modifiers
+          (member_modifier))
+        (variable_declaration
+          (identifier))
+        (number_literal))
+      (function_declaration
+        (modifiers
+          (inheritance_modifier)
+          (member_modifier))
+        (identifier)
+        (function_value_parameters)
+        (function_body
+          (block))))))

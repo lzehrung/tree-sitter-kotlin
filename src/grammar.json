@@ -6283,6 +6283,10 @@
             },
             {
               "type": "STRING",
+              "value": "override"
+            },
+            {
+              "type": "STRING",
               "value": "set"
             },
             {
@@ -6455,6 +6459,10 @@
     ],
     [
       "inheritance_modifier",
+      "_reserved_identifier"
+    ],
+    [
+      "member_modifier",
       "_reserved_identifier"
     ],
     [
