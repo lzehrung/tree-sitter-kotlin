@@ -55,6 +55,9 @@ module.exports = grammar({
     [$.class_modifier, $._reserved_identifier],
     [$.platform_modifier, $._reserved_identifier],
     [$.property_modifier, $._reserved_identifier],
+    [$.type, $._receiver_type, $._reserved_identifier],
+    [$._receiver_type, $._reserved_identifier],
+    [$.type, $._reserved_identifier],
 
     [$.explicit_delegation, $.expression],
     [$.qualified_identifier],
@@ -547,7 +550,7 @@ module.exports = grammar({
       $.function_type,
       $.non_nullable_type,
       $.parenthesized_type,
-      'dynamic',
+      prec.dynamic(2, 'dynamic'),
     ),
 
     user_type: $ => seq(
@@ -578,7 +581,7 @@ module.exports = grammar({
       optional($.type_modifiers),
       choice(
         $.user_type,
-        'dynamic',
+        prec.dynamic(2, 'dynamic'),
         $.parenthesized_type,
         $.nullable_type,
       ),
@@ -1065,6 +1068,7 @@ module.exports = grammar({
         'set',
         'operator',
         'value',
+        'dynamic',
       ),
       $.identifier,
     )),

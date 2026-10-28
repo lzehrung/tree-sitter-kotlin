@@ -2827,8 +2827,12 @@
           "name": "parenthesized_type"
         },
         {
-          "type": "STRING",
-          "value": "dynamic"
+          "type": "PREC_DYNAMIC",
+          "value": 2,
+          "content": {
+            "type": "STRING",
+            "value": "dynamic"
+          }
         }
       ]
     },
@@ -2992,8 +2996,12 @@
               "name": "user_type"
             },
             {
-              "type": "STRING",
-              "value": "dynamic"
+              "type": "PREC_DYNAMIC",
+              "value": 2,
+              "content": {
+                "type": "STRING",
+                "value": "dynamic"
+              }
             },
             {
               "type": "SYMBOL",
@@ -6174,6 +6182,10 @@
             {
               "type": "STRING",
               "value": "value"
+            },
+            {
+              "type": "STRING",
+              "value": "dynamic"
             }
           ]
         },
@@ -6329,6 +6341,19 @@
     ],
     [
       "property_modifier",
+      "_reserved_identifier"
+    ],
+    [
+      "type",
+      "_receiver_type",
+      "_reserved_identifier"
+    ],
+    [
+      "_receiver_type",
+      "_reserved_identifier"
+    ],
+    [
+      "type",
       "_reserved_identifier"
     ],
     [
