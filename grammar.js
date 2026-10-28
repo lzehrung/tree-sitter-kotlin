@@ -635,6 +635,7 @@ module.exports = grammar({
       $._identifier,
       $.string_literal,
       $.multiline_string_literal,
+      $.multi_dollar_string_literal,
       $.character_literal,
       $.number_literal,
       $.float_literal,
@@ -973,6 +974,14 @@ module.exports = grammar({
       )),
       choice('"""', '""""'),
     ),
+
+    // `$$"..."` and `$$"""..."""` (Kotlin 2.2 multi-dollar interpolation): with a prefix of n dollars a lone `$`
+    // is plain text and only n dollars start a template. The whole literal is one token, so the templates in it
+    // are not separated, and a quote inside a `$${...}` template ends the literal early.
+    multi_dollar_string_literal: _ => token(choice(
+      seq(/\$\$+/, '"""', repeat(choice(/[^"]/, seq(/"{1,2}/, /[^"]/))), '"""', repeat('"')),
+      seq(/\$\$+/, '"', repeat(choice(/[^"\\\n]/, /\\./)), '"'),
+    )),
 
     interpolation: $ => choice(
       seq('$', $._identifier),

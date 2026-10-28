@@ -691,3 +691,73 @@ final class Top
     (modifiers
       (inheritance_modifier))
     (identifier)))
+
+========================================
+Multi-dollar string literals
+========================================
+
+val a = $$"?(@.team == $team)"
+val b = $$"""{"team": "$name"}"""
+val c = $$$"$$price"
+val d = $$"{\"$foo\": \"bar\"}"
+val e = $$"a $${b} c"
+val f = $$"""
+  {
+    "$schema": "x",
+    "$id": "$${id}"
+  }
+  """.trimIndent()
+val g = foo($$"x", "y")
+val h = $$""""quoted""""
+val i = $$""
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (call_expression
+      (navigation_expression
+        (multi_dollar_string_literal)
+        (identifier))
+      (value_arguments)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (call_expression
+      (identifier)
+      (value_arguments
+        (value_argument
+          (multi_dollar_string_literal))
+        (value_argument
+          (string_literal
+            (string_content))))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal)))
