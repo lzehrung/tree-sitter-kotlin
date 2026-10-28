@@ -837,7 +837,7 @@ module.exports = grammar({
 
     parenthesized_expression: $ => seq('(', $.expression, ')'),
 
-    collection_literal: $ => seq('[', commaSep1($.expression), optional(','), ']'),
+    collection_literal: $ => seq('[', optionalCommaSep1($.expression), ']'),
 
     when_expression: $ => seq(
       'when',

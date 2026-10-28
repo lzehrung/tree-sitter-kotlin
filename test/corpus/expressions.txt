@@ -912,3 +912,69 @@ class A {
         (function_value_parameters)
         (function_body
           (block))))))
+
+========================================
+Empty collection literal
+========================================
+
+annotation class Single(val binds: Array<KClass<*>> = [], val createdAtStart: Boolean = false)
+
+@Foo(value = [])
+class X
+
+@Bar([], [1, 2,], [3])
+class Y
+
+---
+
+(source_file
+  (class_declaration
+    (modifiers
+      (class_modifier))
+    (identifier)
+    (primary_constructor
+      (class_parameters
+        (class_parameter
+          (identifier)
+          (user_type
+            (identifier)
+            (type_arguments
+              (type_projection
+                (user_type
+                  (identifier)
+                  (type_arguments
+                    (type_projection))))))
+          (collection_literal))
+        (class_parameter
+          (identifier)
+          (user_type
+            (identifier))
+          (identifier)))))
+  (class_declaration
+    (modifiers
+      (annotation
+        (constructor_invocation
+          (user_type
+            (identifier))
+          (value_arguments
+            (value_argument
+              (identifier)
+              (collection_literal))))))
+    (identifier))
+  (class_declaration
+    (modifiers
+      (annotation
+        (constructor_invocation
+          (user_type
+            (identifier))
+          (value_arguments
+            (value_argument
+              (collection_literal))
+            (value_argument
+              (collection_literal
+                (number_literal)
+                (number_literal)))
+            (value_argument
+              (collection_literal
+                (number_literal)))))))
+    (identifier)))
