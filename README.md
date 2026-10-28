@@ -30,6 +30,9 @@
 > - multi-dollar string literals (`$$"..."`, `$$"""..."""`): the new node `multi_dollar_string_literal` has `string_content`,
 >   `escape_sequence` and `interpolation` children like the other strings. Only as many dollars in a row as the prefix has start a
 >   template (`$$name`, `$${expr}`), fewer are text. The scanner keeps the dollar count of each open string as state.
+>   The dollars before the last ones of a longer run are text too. The scanner returns the first of them as one token and the
+>   others as the next one (their number is part of its state), so a run of n dollars, or of quotes before the end of a
+>   triple-quoted string, takes time linear in n.
 >   A template name starts with a letter, `_`, or is a quoted name (`` $$`my name` ``) that closes on the line, as in Kotlin; raw
 >   strings with one dollar use the same rule. The letters come from a table in `src/scanner.c` that `cargo test` checks against
 >   the generated lexer. That lexer, written by tree-sitter-cli 0.24.6, reads no CJK ideograph or Hangul syllable except the end

@@ -1427,6 +1427,132 @@ val b = """lone $` tick"""
       (string_content)
       (string_content))))
 
+============================================================
+Multi-dollar strings with a run of dollars before a template
+============================================================
+
+val a = $$"$$$$$$name"
+val b = $$"x $$$$$${y} z"
+val c = $$"$$$$$$`my name`"
+val d = $$"\n$$$$$$z"
+val e = $$"$$a$$$$$$b"
+val f = $$"$$$$$$ $$"
+val g = $$$"$$$$$$$$$$name"
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content)
+      (interpolation
+        (identifier))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content)
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content)
+      (interpolation
+        (identifier))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (escape_sequence)
+      (string_content)
+      (string_content)
+      (interpolation
+        (identifier))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (interpolation
+        (identifier))
+      (string_content)
+      (string_content)
+      (interpolation
+        (identifier))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content)
+      (interpolation
+        (identifier)))))
+
+==================================================================
+Triple-quoted multi-dollar strings with a run of dollars or quotes
+==================================================================
+
+val a = $$"""$$$$$$name"""
+val b = $$"""x$$$$$${y}"""
+val c = $$"""$$$$$$`open"""
+val d = $$"""x"""""""
+val e = $$""""""""""
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content)
+      (interpolation
+        (identifier))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content)
+      (string_content)
+      (interpolation
+        (identifier))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content)
+      (string_content)
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content)
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content))))
+
 ========================================
 A NUL character inside a block comment
 ========================================

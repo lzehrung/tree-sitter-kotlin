@@ -109,6 +109,13 @@ static inline bool primary_constructor_may_follow(const bool *valid_symbols) {
 // has to know the count while it reads the text, so it keeps one entry per open multi-dollar string: the dollar
 // count, with bit 7 set for a triple-quoted string. Strings nest through templates (`$${ f($$"...") }`). The entries
 // are the serialized state, so a parse that backtracks gets the entries of the token it backtracks to.
+//
+// Only the last dollars of a run that ends in a template start it; the dollars before them are text. Likewise the last
+// three quotes of a run end a triple-quoted string and the quotes before them are text. The lexer can mark the end of
+// a token only where it stands, so a call that has read the whole run cannot end a token before the run's last
+// characters. It returns the first character alone and keeps in `rest` how many text characters follow it, and the
+// next call returns those as one token without reading the run again. A run of n characters then takes O(n) work,
+// where one character per call would read the rest of the run again every time: O(n^2).
 #define MD_MAX_DEPTH 32
 #define MD_RAW 0x80
 #define MD_MAX_DOLLARS 0x7f
@@ -116,26 +123,46 @@ static inline bool primary_constructor_may_follow(const bool *valid_symbols) {
 typedef struct {
     uint8_t depth;
     uint8_t open[MD_MAX_DEPTH];
+    uint32_t rest;
 } Scanner;
 
 void *tree_sitter_kotlin_external_scanner_create() { return ts_calloc(1, sizeof(Scanner)); }
 
 void tree_sitter_kotlin_external_scanner_destroy(void *payload) { ts_free(payload); }
 
+// The serialized state is the number of open strings, their entries and, between the two tokens of a run, `rest`. It is
+// empty outside a multi-dollar string.
 unsigned tree_sitter_kotlin_external_scanner_serialize(void *payload, char *buffer) {
     Scanner *scanner = (Scanner *)payload;
-    if (scanner->depth > 0) {
-        memcpy(buffer, scanner->open, scanner->depth);
+    if (scanner->depth == 0) {
+        return 0;
     }
-    return scanner->depth;
+    unsigned length = 0;
+    buffer[length++] = (char)scanner->depth;
+    memcpy(buffer + length, scanner->open, scanner->depth);
+    length += scanner->depth;
+    if (scanner->rest > 0) {
+        memcpy(buffer + length, &scanner->rest, sizeof(scanner->rest));
+        length += sizeof(scanner->rest);
+    }
+    return length;
 }
 
 void tree_sitter_kotlin_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
     Scanner *scanner = (Scanner *)payload;
     scanner->depth = 0;
-    if (length > 0 && length <= MD_MAX_DEPTH) {
-        memcpy(scanner->open, buffer, length);
-        scanner->depth = (uint8_t)length;
+    scanner->rest = 0;
+    if (length == 0) {
+        return;
+    }
+    const uint8_t depth = (uint8_t)buffer[0];
+    if (depth > MD_MAX_DEPTH || length < 1u + depth) {
+        return;
+    }
+    memcpy(scanner->open, buffer + 1, depth);
+    scanner->depth = depth;
+    if (length >= 1u + depth + sizeof(scanner->rest)) {
+        memcpy(&scanner->rest, buffer + 1 + depth, sizeof(scanner->rest));
     }
 }
 
@@ -304,12 +331,31 @@ static bool scan_multi_dollar_start(Scanner *scanner, TSLexer *lexer) {
 // Inside a multi-dollar string, one token per call: a template start, the end of the string, or text. Text stops
 // before whatever the grammar reads itself (a template, an escape sequence, the end), and the next call returns that.
 // The lexer can mark the end of a token only where it stands, so a run of `$` or `"` is measured by reading it, and
-// when its leading characters are text and the rest is not, they are returned one per call.
+// when its leading characters are text and the rest is not, the first is returned alone and the others, counted in
+// `rest`, by the next call.
 static bool scan_multi_dollar_part(Scanner *scanner, TSLexer *lexer) {
     const uint8_t open = scanner->open[scanner->depth - 1];
     const unsigned dollars = open & MD_MAX_DOLLARS;
     const bool raw = (open & MD_RAW) != 0;
     bool has_text = false;
+
+    if (scanner->rest > 0) {
+        // The others of a run whose first character was just returned. The run was measured then and they are all text,
+        // so they are one token. If the next character is neither `$` nor `"` the state does not fit the text, and
+        // the call reads on as usual.
+        const int32_t kind = lexer->lookahead;
+        uint32_t rest = scanner->rest;
+        scanner->rest = 0;
+        if (kind == '$' || kind == '"') {
+            while (rest > 0 && lexer->lookahead == kind) {
+                advance(lexer);
+                rest--;
+            }
+            lexer->mark_end(lexer);
+            lexer->result_symbol = MD_STRING_CONTENT;
+            return true;
+        }
+    }
 
     for (;;) {
         if (lexer->eof(lexer)) {
@@ -337,7 +383,11 @@ static bool scan_multi_dollar_part(Scanner *scanner, TSLexer *lexer) {
             const bool quoted = lexer->lookahead == '`';
             if (run >= dollars && (lexer->lookahead == '{' || quoted || is_identifier_start(lexer->lookahead))) {
                 if (has_text || run > dollars) {
-                    // The text before the dollars, or the dollars before the last ones, ends here.
+                    // The text before the dollars, or the dollars before the last ones, ends here. Those dollars are
+                    // text: the first is the token (the end was marked after it), the next call returns the others.
+                    if (!has_text) {
+                        scanner->rest = run - dollars - 1;
+                    }
                     lexer->result_symbol = MD_STRING_CONTENT;
                     return true;
                 }
@@ -387,6 +437,10 @@ static bool scan_multi_dollar_part(Scanner *scanner, TSLexer *lexer) {
             }
             if (run >= 3) {
                 if (has_text || run > 3) {
+                    // The text before the quotes, or the quotes before the last three, ends here; as for dollars.
+                    if (!has_text) {
+                        scanner->rest = run - 3 - 1;
+                    }
                     lexer->result_symbol = MD_STRING_CONTENT;
                     return true;
                 }
@@ -421,6 +475,7 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
         (valid_symbols[MD_STRING_CONTENT] || valid_symbols[MD_STRING_END])) {
         return scan_multi_dollar_part((Scanner *)payload, lexer);
     }
+    ((Scanner *)payload)->rest = 0;
 
     if (valid_symbols[MULTILINE_STRING_CONTENT]) {
         bool did_advance = false;
