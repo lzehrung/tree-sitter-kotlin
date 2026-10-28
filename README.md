@@ -1,5 +1,28 @@
 # tree-sitter-kotlin
 
+> **codegraph fork.** This is a fork of
+> [tree-sitter-grammars/tree-sitter-kotlin](https://github.com/tree-sitter-grammars/tree-sitter-kotlin)
+> that carries upstream fixes which are not merged or released yet, so that
+> [codegraph](https://github.com/lzehrung/codegraph) can build against a Kotlin grammar that parses one-line class bodies and
+> annotated declarations without ERROR nodes. Use the `codegraph` branch pinned by commit; `master` tracks upstream. The
+> Rust crate keeps the name and version `tree-sitter-kotlin-ng` 1.1.0, so it is a drop-in Cargo git dependency:
+> `tree-sitter-kotlin-ng = { git = "https://github.com/lzehrung/tree-sitter-kotlin", rev = "<commit>" }`.
+>
+> Applied upstream pull requests (cherry-picked with their original authorship):
+>
+> - [#11](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/11): automatic semicolon before a closing brace on the same line
+> - [#13](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/13): terminate class members before a declaration keyword on the same line
+> - [#21](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/21): a declaration under annotations is a declaration, not an `annotated_expression`
+> - [#14](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/14): stop the annotation scan at end of file (infinite loop)
+> - [#17](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/17): `where` as an ordinary identifier at statement start
+> - [#20](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/20): read whole identifiers when checking for keywords after a newline
+> - [#24](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/24): a call after a local property is not an accessor
+>
+> Not applied: #16 (conflicts with #14 in the scanner), #18 (same fix as #14), and the larger grammar changes (#5, #7, #15, #22, #23).
+>
+> `src/parser.c` is generated with `npx tree-sitter-cli@0.24.6 generate` (language ABI 14, the CLI that produced the upstream file),
+> so regenerating an unmodified checkout gives no diff. `npx tree-sitter-cli@0.24.6 test` runs the corpus in `test/corpus`.
+
 [![CI][ci]](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/actions/workflows/ci.yml)
 [![discord][discord]](https://discord.gg/w7nTvsVJhm)
 [![matrix][matrix]](https://matrix.to/#/#tree-sitter-chat:matrix.org)
