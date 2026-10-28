@@ -424,29 +424,14 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                 lexer->mark_end(lexer);
                 return true;
             case '@':
-                if (valid_symbols[CONSTRUCTOR]) {
-                    // At EOF lookahead is 0, which is not whitespace, so this loop has to stop
-                    // at end of input as well -- otherwise skip() has nothing left to consume
-                    // and the condition stays true forever.
-                    while (!lexer->eof(lexer) && !iswspace(lexer->lookahead)) {
-                        skip(lexer);
-                    }
-                    while (iswspace(lexer->lookahead)) {
-                        skip(lexer);
-                    }
-                    char ctor[12] = "constructor";
-                    for (uint8_t i = 0; i < 11; i++) {
-                        if (lexer->lookahead != ctor[i]) {
-                            return true;
-                        }
-                        skip(lexer);
-                    }
-                    return false;
-                }
-                if (valid_symbols[GET] || valid_symbols[SET]) {
+                // An annotation line may belong to what follows: a primary constructor, or an accessor of the
+                // property above (`val size` / `@JvmName("size")` / `get() = ...`). Skip the annotation and decide
+                // on the next word. Anything else starts a new declaration.
+                if (valid_symbols[CONSTRUCTOR] || valid_symbols[GET] || valid_symbols[SET]) {
                     bool saw_paren = false;
-                    // Same EOF guard as above: at end of input lookahead is neither '\n' nor
-                    // whitespace, so neither arm of this condition can end the loop.
+                    // At EOF lookahead is 0, which is neither '\n' nor whitespace, so neither arm
+                    // of this condition can end the loop; it has to stop at end of input explicitly,
+                    // otherwise skip() has nothing left to consume and the condition stays true forever.
                     while (!lexer->eof(lexer) &&
                            (saw_paren ? lexer->lookahead != '\n' : !iswspace(lexer->lookahead))) {
                         skip(lexer);

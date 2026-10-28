@@ -1023,3 +1023,94 @@ fun check(actual: Int, expect: Set<Int>) {
           (value_arguments
             (value_argument
               (identifier))))))))
+
+==================================================
+Annotated accessor after a property without a type
+==================================================
+
+class Sized {
+  val size
+    @JvmName("size")
+    get() = getSize()
+
+  val count: Int
+    @JvmName("count")
+    get() = 0
+
+  class Header
+  @Inject internal constructor(val a: Int)
+
+  val name
+  @Deprecated("old") fun name() = 1
+}
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (getter
+          (modifiers
+            (annotation
+              (constructor_invocation
+                (user_type
+                  (identifier))
+                (value_arguments
+                  (value_argument
+                    (string_literal
+                      (string_content)))))))
+          (function_body
+            (call_expression
+              (identifier)
+              (value_arguments)))))
+      (property_declaration
+        (variable_declaration
+          (identifier)
+          (user_type
+            (identifier)))
+        (getter
+          (modifiers
+            (annotation
+              (constructor_invocation
+                (user_type
+                  (identifier))
+                (value_arguments
+                  (value_argument
+                    (string_literal
+                      (string_content)))))))
+          (function_body
+            (number_literal))))
+      (class_declaration
+        (identifier)
+        (primary_constructor
+          (modifiers
+            (annotation
+              (user_type
+                (identifier)))
+            (visibility_modifier))
+          (class_parameters
+            (class_parameter
+              (identifier)
+              (user_type
+                (identifier))))))
+      (property_declaration
+        (variable_declaration
+          (identifier)))
+      (function_declaration
+        (modifiers
+          (annotation
+            (constructor_invocation
+              (user_type
+                (identifier))
+              (value_arguments
+                (value_argument
+                  (string_literal
+                    (string_content)))))))
+        (identifier)
+        (function_value_parameters)
+        (function_body
+          (number_literal))))))
