@@ -612,3 +612,82 @@ val value = dynamic + 1
     (binary_expression
       (identifier)
       (number_literal))))
+
+========================================
+A variable called final
+========================================
+
+class Source {
+  private var final = false
+
+  fun refill() {
+    while (buffer.size == 0L && !final) {
+      if (source.exhausted()) {
+        final = true
+        doFinal()
+      }
+    }
+    final.toString()
+  }
+
+  final fun done() {}
+}
+
+final class Top
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (modifiers
+          (visibility_modifier))
+        (variable_declaration
+          (identifier))
+        (identifier))
+      (function_declaration
+        (identifier)
+        (function_value_parameters)
+        (function_body
+          (block
+            (while_statement
+              (binary_expression
+                (binary_expression
+                  (navigation_expression
+                    (identifier)
+                    (identifier))
+                  (number_literal))
+                (unary_expression
+                  (identifier)))
+              (block
+                (if_expression
+                  (call_expression
+                    (navigation_expression
+                      (identifier)
+                      (identifier))
+                    (value_arguments))
+                  (block
+                    (assignment
+                      (identifier)
+                      (identifier))
+                    (call_expression
+                      (identifier)
+                      (value_arguments))))))
+            (call_expression
+              (navigation_expression
+                (identifier)
+                (identifier))
+              (value_arguments)))))
+      (function_declaration
+        (modifiers
+          (inheritance_modifier))
+        (identifier)
+        (function_value_parameters)
+        (function_body
+          (block)))))
+  (class_declaration
+    (modifiers
+      (inheritance_modifier))
+    (identifier)))

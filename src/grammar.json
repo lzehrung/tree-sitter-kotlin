@@ -6165,6 +6165,10 @@
             },
             {
               "type": "STRING",
+              "value": "final"
+            },
+            {
+              "type": "STRING",
               "value": "inner"
             },
             {
@@ -6341,6 +6345,10 @@
     ],
     [
       "property_modifier",
+      "_reserved_identifier"
+    ],
+    [
+      "inheritance_modifier",
       "_reserved_identifier"
     ],
     [
