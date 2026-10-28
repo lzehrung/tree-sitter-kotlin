@@ -793,3 +793,88 @@ class Foo {
         (setter
           (modifiers
             (visibility_modifier)))))))
+
+==================================================
+Primary constructor of a nested class on a newline
+==================================================
+
+class Outer {
+  public class Options
+  private constructor(
+    internal val strings: Array<String>,
+  ) {
+    fun strings() = strings
+  }
+
+  class Inner {}
+  private constructor() : this()
+
+  val x = 1
+  constructor(a: Int) : this()
+
+  val size
+  constructor(b: Boolean) : this()
+}
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (class_declaration
+        (modifiers
+          (visibility_modifier))
+        (identifier)
+        (primary_constructor
+          (modifiers
+            (visibility_modifier))
+          (class_parameters
+            (class_parameter
+              (modifiers
+                (visibility_modifier))
+              (identifier)
+              (user_type
+                (identifier)
+                (type_arguments
+                  (type_projection
+                    (user_type
+                      (identifier))))))))
+        (class_body
+          (function_declaration
+            (identifier)
+            (function_value_parameters)
+            (function_body
+              (identifier)))))
+      (class_declaration
+        (identifier)
+        (class_body))
+      (secondary_constructor
+        (modifiers
+          (visibility_modifier))
+        (function_value_parameters)
+        (constructor_delegation_call
+          (value_arguments)))
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal))
+      (secondary_constructor
+        (function_value_parameters
+          (parameter
+            (identifier)
+            (user_type
+              (identifier))))
+        (constructor_delegation_call
+          (value_arguments)))
+      (property_declaration
+        (variable_declaration
+          (identifier)))
+      (secondary_constructor
+        (function_value_parameters
+          (parameter
+            (identifier)
+            (user_type
+              (identifier))))
+        (constructor_delegation_call
+          (value_arguments))))))

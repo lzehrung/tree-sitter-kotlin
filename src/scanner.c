@@ -90,6 +90,13 @@ static bool set_paren_is_call(TSLexer *lexer) {
     return false;
 }
 
+// True when a primary constructor may follow, as on the line after a class header: CONSTRUCTOR is valid and no
+// accessor can follow. CONSTRUCTOR is also valid after the header of a property without a type (`val size`),
+// because the grammar lets a receiver type be followed directly by a name, but there GET and SET are valid too.
+static inline bool primary_constructor_may_follow(const bool *valid_symbols) {
+    return valid_symbols[CONSTRUCTOR] && !valid_symbols[GET] && !valid_symbols[SET];
+}
+
 void *tree_sitter_kotlin_external_scanner_create() { return NULL; }
 
 void tree_sitter_kotlin_external_scanner_destroy(void *payload) {}
@@ -321,10 +328,16 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                     scanned_word, &index);
 
                 // If `CLASS_MEMBER_SEMI` is valid, we found a secondary constructor and so we want to insert a semi, OR
-                // we found a variable named constructor whose field is being accessed
+                // we found a variable named constructor whose field is being accessed.
+                // Exception: when `constructor` may still continue a class header (as after `class Options` on the
+                // line above), it is that class's primary constructor. The Kotlin grammar allows a newline before a
+                // primary constructor, so no semi is inserted even inside a class body.
                 if (index == 5) {
                     while (iswspace(lexer->lookahead)) {
                         skip(lexer);
+                    }
+                    if (primary_constructor_may_follow(valid_symbols) && lexer->lookahead == '(') {
+                        return false;
                     }
                     if (valid_symbols[CLASS_MEMBER_SEMI] || lexer->lookahead == '.' || lexer->lookahead == '=') {
                         return true;
