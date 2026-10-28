@@ -406,6 +406,28 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                 else if (index == 1 && valid_symbols[IN]) {
                     return true;
                 }
+                // `by` continues a declaration only when an expression follows it (`by lazy { ... }`). Followed by a
+                // character that cannot start an expression it is an ordinary name at the start of a new statement
+                // (`by.write(x)`, `by = 1`, `by?.f()`, `by[0]`).
+                else if (index == 6) {
+                    while (iswspace(lexer->lookahead)) {
+                        skip(lexer);
+                    }
+                    switch (lexer->lookahead) {
+                        case '.':
+                        case '?':
+                        case '=':
+                        case '[':
+                        case ',':
+                        case ')':
+                        case ']':
+                        case '}':
+                        case ';':
+                            return true;
+                        default:
+                            break;
+                    }
+                }
                 // `where` continues a declaration only as a type-constraints
                 // clause; followed by `?` `.` `=` `(` it is an ordinary
                 // identifier (`where?.let { ... }`) — close the statement.

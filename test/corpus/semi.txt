@@ -1114,3 +1114,102 @@ class Sized {
         (function_value_parameters)
         (function_body
           (number_literal))))))
+
+========================================
+A variable called by
+========================================
+
+fun f() {
+  val by = base / "by"
+  by.writeUtf8("by")
+  by = 5
+  by?.foo()
+  by[0]
+  println(by)
+}
+
+class Lazy {
+  val x: Int
+    by lazy { 1 }
+  val y by lazy { 2 }
+}
+
+class Wrapper(b: B) : B
+  by b
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (binary_expression
+            (identifier)
+            (string_literal
+              (string_content))))
+        (call_expression
+          (navigation_expression
+            (identifier)
+            (identifier))
+          (value_arguments
+            (value_argument
+              (string_literal
+                (string_content)))))
+        (assignment
+          (identifier)
+          (number_literal))
+        (call_expression
+          (navigation_expression
+            (identifier)
+            (identifier))
+          (value_arguments))
+        (index_expression
+          (identifier)
+          (number_literal))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier)))))))
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier)
+          (user_type
+            (identifier)))
+        (property_delegate
+          (call_expression
+            (identifier)
+            (annotated_lambda
+              (lambda_literal
+                (number_literal))))))
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (property_delegate
+          (call_expression
+            (identifier)
+            (annotated_lambda
+              (lambda_literal
+                (number_literal))))))))
+  (class_declaration
+    (identifier)
+    (primary_constructor
+      (class_parameters
+        (class_parameter
+          (identifier)
+          (user_type
+            (identifier)))))
+    (delegation_specifiers
+      (delegation_specifier
+        (explicit_delegation
+          (user_type
+            (identifier))
+          (identifier))))))
