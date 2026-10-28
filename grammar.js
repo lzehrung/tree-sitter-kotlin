@@ -788,7 +788,7 @@ module.exports = grammar({
     index_expression: $ => prec(PREC.CALL, seq(
       $.expression,
       '[',
-      commaSep($.expression),
+      optionalCommaSep1($.expression),
       ']',
     )),
 
@@ -1115,17 +1115,6 @@ function sep1(rule, separator) {
  */
 function optionalSep1(rule, separator) {
   return optional(seq(rule, repeat(seq(separator, rule)), optional(separator)));
-}
-
-/**
- * Creates a rule to optionally match one or more of the rules separated by a comma
- *
- * @param {Rule} rule
- *
- * @returns {ChoiceRule}
- */
-function commaSep(rule) {
-  return optional(commaSep1(rule));
 }
 
 /**

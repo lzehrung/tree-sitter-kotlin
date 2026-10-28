@@ -761,3 +761,73 @@ val i = $$""
     (variable_declaration
       (identifier))
     (multi_dollar_string_literal)))
+
+========================================
+Trailing comma in an index expression
+========================================
+
+val parameters = allParameters.parametersCreators[
+    CheckedComponent(
+        definition.qualifier,
+        definition.primaryType,
+    ),
+]?.invoke(definition.qualifier)
+val a = b[1, 2,]
+val c = d[x,]
+val e = f[]
+val g = h[1, 2]
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (call_expression
+      (navigation_expression
+        (index_expression
+          (navigation_expression
+            (identifier)
+            (identifier))
+          (call_expression
+            (identifier)
+            (value_arguments
+              (value_argument
+                (navigation_expression
+                  (identifier)
+                  (identifier)))
+              (value_argument
+                (navigation_expression
+                  (identifier)
+                  (identifier))))))
+        (identifier))
+      (value_arguments
+        (value_argument
+          (navigation_expression
+            (identifier)
+            (identifier))))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (index_expression
+      (identifier)
+      (number_literal)
+      (number_literal)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (index_expression
+      (identifier)
+      (identifier)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (index_expression
+      (identifier)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (index_expression
+      (identifier)
+      (number_literal)
+      (number_literal))))
