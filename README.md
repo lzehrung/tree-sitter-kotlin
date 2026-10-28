@@ -30,6 +30,10 @@
 > - multi-dollar string literals (`$$"..."`, `$$"""..."""`): the new node `multi_dollar_string_literal` has `string_content`,
 >   `escape_sequence` and `interpolation` children like the other strings. Only as many dollars in a row as the prefix has start a
 >   template (`$$name`, `$${expr}`), fewer are text. The scanner keeps the dollar count of each open string as state.
+>   A template name starts with a letter, `_`, or is a quoted name (`` $$`my name` ``) that closes on the line, as in Kotlin; raw
+>   strings with one dollar use the same rule. The letters come from a table in `src/scanner.c` that `cargo test` checks against
+>   the generated lexer. That lexer, written by tree-sitter-cli 0.24.6, reads no CJK ideograph or Hangul syllable except the end
+>   points of their ranges and no letter above U+10915, so those are not identifiers or template names here.
 > - a trailing comma in an index expression, and an empty collection literal `[]`
 > - a NUL character inside a block comment
 >

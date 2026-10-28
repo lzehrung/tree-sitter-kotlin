@@ -1288,6 +1288,145 @@ fun g() {
           (interpolation
             (identifier)))))))
 
+========================================================
+Multi-dollar templates with Unicode and underscore names
+========================================================
+
+val a = $$"x $$ñame $$café $$_x $${ñ} y"
+val b = $$"""x $$Ωmega $$_ $$ünï $$ひらがな z"""
+val c = $$"not names: $$1 $$Ⅷ $$- $$ x $ñame"
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content))))
+
+========================================
+Multi-dollar templates with quoted names
+========================================
+
+val a = $$"x $$`my name` y $${`my name`}"
+val b = $$"""x $$`my name` y"""
+val c = $$"cost: $$`unclosed"
+val d = $$"""text $$` and more"""
+val e = $$"empty: $$`` and more"
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content)
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content)
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (string_content)
+      (string_content))))
+
+==============================================================
+Raw string templates with Unicode, underscore and quoted names
+==============================================================
+
+val a = """x $ñame y $_z w $`my name` v $café u"""
+val b = """lone $` tick"""
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multiline_string_literal
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multiline_string_literal
+      (string_content)
+      (string_content)
+      (string_content))))
+
 ========================================
 A NUL character inside a block comment
 ========================================
