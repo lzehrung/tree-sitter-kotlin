@@ -1213,3 +1213,94 @@ class Wrapper(b: B) : B
           (user_type
             (identifier))
           (identifier))))))
+
+===================================================================
+Names that start with a keyword and go on with a letter above ASCII
+===================================================================
+
+fun f(x: Int) {
+  val a = x
+  in名前(a)
+  as名前(a)
+  by名前(a)
+  else名前(a)
+  where名前(a)
+  constructor名前(a)
+  instanceof名前(a)
+  inÅr(a)
+  is名前(a)
+  get名前(a)
+  set名前(a)
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (user_type
+          (identifier))))
+    (function_body
+      (block
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (identifier))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))))))

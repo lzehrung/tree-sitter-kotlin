@@ -27,6 +27,13 @@ enum TokenType {
 #define MAX_WORD_SIZE 16
 #define MAX_WORDS 16
 
+// Where a name ends has to be the same on every platform. `iswalpha` and `iswalnum` are not the same everywhere: the C
+// library and its locale decide, and Windows cuts a character above U+FFFF to 16 bits. A name that starts with a
+// keyword and goes on with a letter above ASCII (`in` and a CJK letter) at the start of a line was a call on Windows
+// but the keyword on Linux. Names are read with the letter table below instead.
+static inline bool is_name_letter(int32_t c);
+static inline bool is_name_character(int32_t c);
+
 static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
 
 static inline void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
@@ -45,15 +52,17 @@ static bool scan_words(TSLexer *lexer, const char words[MAX_WORDS][MAX_WORD_SIZE
                        uint8_t *index) {
     if (!scanned_word[0]) {
         for (uint8_t i = 0; i < MAX_WORD_SIZE - 1; i++) {
-            // Read the whole identifier (letters, digits, `_`), so that `in1`, `open_file` or
-            // `set_value` are not mistaken for the keywords `in`, `open` or `set`.
-            if (!(iswalpha(lexer->lookahead) || (i > 0 && (iswdigit(lexer->lookahead) || lexer->lookahead == '_')))) {
+            // Read the whole identifier (letters, digits, `_`), so that `in1`, `open_file`, `set_value` or `in` with a
+            // letter above ASCII after it are not mistaken for the keywords `in`, `open` or `set`.
+            const int32_t c = lexer->lookahead;
+            if (!(is_name_letter(c) || (i > 0 && ((c >= '0' && c <= '9') || c == '_')))) {
                 if (i == 0) {
                     return false;
                 }
                 break;
             }
-            scanned_word[i] = (char)lexer->lookahead;
+            // A letter above ASCII is part of the name and of no keyword.
+            scanned_word[i] = c < 0x80 ? (char)c : '\x7f';
             skip(lexer);
         }
     }
@@ -327,14 +336,20 @@ static bool is_letter(uint32_t c) {
     return false;
 }
 
-// The first character of a name after the dollars of a template: `_` or a letter. It gives the same answer on every
-// platform, which `iswalpha` does not: that depends on the C library and its locale.
-static inline bool is_identifier_start(int32_t c) {
+// An ASCII letter or a letter above ASCII. It gives the same answer on every platform, which `iswalpha` does not.
+static inline bool is_name_letter(int32_t c) {
     if (c < 0x80) {
-        return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
     }
     return is_letter((uint32_t)c);
 }
+
+// An ASCII letter or digit, or a letter above ASCII; `_` is for the caller to test. A digit of another script is not
+// one of them.
+static inline bool is_name_character(int32_t c) { return is_name_letter(c) || (c >= '0' && c <= '9'); }
+
+// The first character of a name after the dollars of a template: `_` or a letter.
+static inline bool is_identifier_start(int32_t c) { return c == '_' || is_name_letter(c); }
 
 // With the opening backtick of a quoted name read: true when the name is complete, one or more characters that are
 // not a backtick or a line break and then the closing backtick. Kotlin reads `$` and a quoted name as a template, and
@@ -656,7 +671,7 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                                        decl_word, NULL)) {
                             // Word boundary: reject identifiers that merely start
                             // with a keyword (`val2`, `fun_x`).
-                            return !iswalnum(lexer->lookahead) && lexer->lookahead != '_';
+                            return !is_name_character(lexer->lookahead) && lexer->lookahead != '_';
                         }
                         return false;
                     }
@@ -722,7 +737,7 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                     skip(lexer);
                     if (lexer->lookahead == 's') {
                         skip(lexer);
-                        if (!iswalnum(lexer->lookahead)) {
+                        if (!is_name_character(lexer->lookahead)) {
                             return true;
                         }
                     }
@@ -934,7 +949,7 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                     advance(lexer);
                     lexer->result_symbol = NOT_IS;
                     lexer->mark_end(lexer);
-                    return !iswalnum(lexer->lookahead);
+                    return !is_name_character(lexer->lookahead);
                 }
             }
         }
@@ -947,7 +962,7 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                 advance(lexer);
                 lexer->result_symbol = IN;
                 lexer->mark_end(lexer);
-                return !iswalnum(lexer->lookahead);
+                return !is_name_character(lexer->lookahead);
             }
         }
     }
