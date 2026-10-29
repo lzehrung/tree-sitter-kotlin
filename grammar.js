@@ -1076,7 +1076,8 @@ module.exports = grammar({
       repeat(seq('.', $.identifier)),
     ),
 
-    label: _ => token(/[a-zA-Z_][a-zA-Z_0-9]*@/),
+    // An identifier followed by `@`, so it starts and continues with the same characters as `identifier`.
+    label: _ => token(/[\p{L}_][\p{L}_\p{Nd}]*@/u),
 
     _identifier: $ => choice($.identifier, $._reserved_identifier),
 

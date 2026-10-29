@@ -298,3 +298,185 @@ enum class Color2(val rgb: Int) {
         (function_value_parameters)
         (function_body
           (identifier))))))
+
+==========================================================
+Names written with CJK ideographs, Hangul and rare scripts
+==========================================================
+
+package 例.パッケージ
+
+import 例.名前
+import 例.名前 as 別名
+
+class 名前(val 値: Int) {
+  fun 取得(): Int = 値
+}
+
+class 한글
+
+object 𝒜
+
+typealias 𠮷野家 = 名前
+
+fun 계산(변수: Int): Int = 변수 + 1
+
+val 𠮷 = 계산(1)
+val 名前２ = 1
+val x١ = 2
+val 혼합名前 = 3
+
+enum class 색 { 빨강, 파랑 }
+
+---
+
+(source_file
+  (package_header
+    (qualified_identifier
+      (identifier)
+      (identifier)))
+  (import
+    (qualified_identifier
+      (identifier)
+      (identifier)))
+  (import
+    (qualified_identifier
+      (identifier)
+      (identifier))
+    (identifier))
+  (class_declaration
+    (identifier)
+    (primary_constructor
+      (class_parameters
+        (class_parameter
+          (identifier)
+          (user_type
+            (identifier)))))
+    (class_body
+      (function_declaration
+        (identifier)
+        (function_value_parameters)
+        (user_type
+          (identifier))
+        (function_body
+          (identifier)))))
+  (class_declaration
+    (identifier))
+  (object_declaration
+    (identifier))
+  (type_alias
+    (identifier)
+    (user_type
+      (identifier)))
+  (function_declaration
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (user_type
+          (identifier))))
+    (user_type
+      (identifier))
+    (function_body
+      (binary_expression
+        (identifier)
+        (number_literal))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (call_expression
+      (identifier)
+      (value_arguments
+        (value_argument
+          (number_literal)))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (class_declaration
+    (modifiers
+      (class_modifier))
+    (identifier)
+    (enum_class_body
+      (enum_entry
+        (identifier))
+      (enum_entry
+        (identifier)))))
+
+=======================================
+Labels written with letters above ASCII
+=======================================
+
+fun f() {
+  ループ@ for (i in 0..10) {
+    if (i == 5) break@ループ
+    continue@ループ
+  }
+  반복@ while (true) { return@반복 }
+  listOf(1).forEach 名前@{ return@名前 }
+  loop@ for (j in 0..1) { break@loop }
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (for_statement
+          (label)
+          (variable_declaration
+            (identifier))
+          (range_expression
+            (number_literal)
+            (number_literal))
+          (block
+            (if_expression
+              (binary_expression
+                (identifier)
+                (number_literal))
+              (labeled_expression
+                (label)
+                (identifier)))
+            (labeled_expression
+              (label)
+              (identifier))))
+        (while_statement
+          (label)
+          (identifier)
+          (block
+            (return_expression
+              (identifier))))
+        (call_expression
+          (navigation_expression
+            (call_expression
+              (identifier)
+              (value_arguments
+                (value_argument
+                  (number_literal))))
+            (identifier))
+          (annotated_lambda
+            (label)
+            (lambda_literal
+              (return_expression
+                (identifier)))))
+        (for_statement
+          (label)
+          (variable_declaration
+            (identifier))
+          (range_expression
+            (number_literal)
+            (number_literal))
+          (block
+            (labeled_expression
+              (label)
+              (identifier))))))))

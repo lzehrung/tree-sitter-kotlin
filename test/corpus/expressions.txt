@@ -1553,6 +1553,151 @@ val e = $$""""""""""
       (string_content)
       (string_content))))
 
+==========================================================
+References to names written with CJK ideographs and Hangul
+==========================================================
+
+fun 使う(入力: 名前): Int {
+  val 結果 = 名前(1).取得()
+  println(結果 + 入力.値)
+  val 인스턴스 = 名前(値 = 2)
+  val 참조 = ::계산
+  println("id: ${値} ${인스턴스.값}")
+  return 계산(結果)
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (user_type
+          (identifier))))
+    (user_type
+      (identifier))
+    (function_body
+      (block
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (call_expression
+            (navigation_expression
+              (call_expression
+                (identifier)
+                (value_arguments
+                  (value_argument
+                    (number_literal))))
+              (identifier))
+            (value_arguments)))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (binary_expression
+                (identifier)
+                (navigation_expression
+                  (identifier)
+                  (identifier))))))
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (call_expression
+            (identifier)
+            (value_arguments
+              (value_argument
+                (identifier)
+                (number_literal)))))
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (callable_reference
+            (identifier)))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (string_literal
+                (string_content)
+                (interpolation
+                  (identifier))
+                (string_content)
+                (interpolation
+                  (navigation_expression
+                    (identifier)
+                    (identifier)))))))
+        (return_expression
+          (call_expression
+            (identifier)
+            (value_arguments
+              (value_argument
+                (identifier)))))))))
+
+===========================================================
+Templates with names written with CJK ideographs and Hangul
+===========================================================
+
+val a = """x $名前 y $한글 z $𠮷野家 w $日本語。"""
+val b = $$"x $$名前 $$한글 $$𠮷野家 $${値} y $名前"
+val c = $$"not names: $$。 $$⻄ $$１ $$-"
+val d = $$"""x $$名前 $$한글 z"""
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multiline_string_literal
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (multi_dollar_string_literal
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content)
+      (interpolation
+        (identifier))
+      (string_content))))
+
 ========================================
 A NUL character inside a block comment
 ========================================

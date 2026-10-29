@@ -73,25 +73,14 @@ mod tests {
     /// the first character of an `identifier`. This reads them out of the lexer one code point at a time.
     #[test]
     fn scanner_letter_table_matches_the_lexer() {
-        let mut parser = tree_sitter::Parser::new();
-        parser
-            .set_language(&super::LANGUAGE.into())
-            .expect("Error loading Kotlin parser");
-
+        let mut parser = kotlin_parser();
         let mut lexed: Vec<(u32, u32)> = Vec::new();
         let mut buffer = [0u8; 4];
         for code_point in 0x80u32..=0x10FFFF {
             let Some(character) = char::from_u32(code_point) else {
                 continue;
             };
-            let text: &str = character.encode_utf8(&mut buffer);
-            let tree = parser.parse(text, None).expect("a tree");
-            let root = tree.root_node();
-            let is_identifier = !root.has_error() && root.child_count() == 1 && {
-                let child = root.child(0).expect("a child");
-                child.kind() == "identifier" && child.start_byte() == 0 && child.end_byte() == text.len()
-            };
-            if is_identifier {
+            if is_lone_identifier(&mut parser, character.encode_utf8(&mut buffer)) {
                 match lexed.last_mut() {
                     Some(last) if last.1 + 1 == code_point => last.1 = code_point,
                     _ => lexed.push((code_point, code_point)),
@@ -117,12 +106,77 @@ mod tests {
         }
     }
 
+    /// tree-sitter-cli 0.24 resolved `\p{L}` from a table that kept only the first and last code point of the
+    /// large ranges and stopped at U+10915, so most CJK ideographs, Hangul syllables and every letter of the later
+    /// scripts were not identifiers. Every code point of these blocks is a letter (Unicode category Lo or Lm), so each
+    /// has to start an identifier, and to continue one.
+    #[test]
+    fn lexer_reads_every_letter_of_the_blocks_an_old_unicode_table_cut() {
+        let blocks: [(u32, u32, &str); 15] = [
+            (0x3400, 0x4DBF, "CJK Unified Ideographs Extension A"),
+            (0x4E00, 0x9FFF, "CJK Unified Ideographs"),
+            (0xA000, 0xA48C, "Yi Syllables"),
+            (0xAC00, 0xD7A3, "Hangul Syllables"),
+            (0x13000, 0x1342F, "Egyptian Hieroglyphs"),
+            (0x17000, 0x187F7, "Tangut"),
+            (0x18D00, 0x18D08, "Tangut Supplement"),
+            (0x20000, 0x2A6DF, "CJK Unified Ideographs Extension B"),
+            (0x2A700, 0x2B739, "CJK Unified Ideographs Extension C"),
+            (0x2B740, 0x2B81D, "CJK Unified Ideographs Extension D"),
+            (0x2B820, 0x2CEA1, "CJK Unified Ideographs Extension E"),
+            (0x2CEB0, 0x2EBE0, "CJK Unified Ideographs Extension F"),
+            (0x2EBF0, 0x2EE5D, "CJK Unified Ideographs Extension I"),
+            (0x30000, 0x3134A, "CJK Unified Ideographs Extension G"),
+            (0x31350, 0x323AF, "CJK Unified Ideographs Extension H"),
+        ];
+        let mut parser = kotlin_parser();
+        for (first, last, block) in blocks {
+            for code_point in first..=last {
+                let letter = char::from_u32(code_point).expect("a scalar value");
+                assert!(
+                    is_lone_identifier(&mut parser, &letter.to_string()),
+                    "U+{code_point:04X} ({block}) does not start an identifier"
+                );
+                assert!(
+                    is_lone_identifier(&mut parser, &format!("a{letter}1")),
+                    "U+{code_point:04X} ({block}) does not continue an identifier"
+                );
+            }
+        }
+    }
+
+    /// Characters that are not letters stay out: CJK punctuation and radicals, a letter-number, an emoji and a currency
+    /// sign are not identifiers, and a decimal digit of another script (category Nd) continues an identifier but does
+    /// not start one.
+    #[test]
+    fn lexer_does_not_read_other_characters_as_letters() {
+        let mut parser = kotlin_parser();
+        for text in ["\u{3001}", "\u{3002}", "\u{2e80}", "\u{2f00}", "\u{2167}", "\u{1f600}", "\u{20ac}", "\u{ff01}"] {
+            assert!(!is_lone_identifier(&mut parser, text), "{text:?} starts an identifier");
+            assert!(!is_lone_identifier(&mut parser, &format!("a{text}")), "{text:?} continues an identifier");
+        }
+        for digit in ["\u{661}", "\u{ff11}", "\u{1d7ce}"] {
+            assert!(!is_lone_identifier(&mut parser, digit), "{digit:?} starts an identifier");
+            assert!(is_lone_identifier(&mut parser, &format!("a{digit}")), "{digit:?} does not continue an identifier");
+        }
+    }
+
     fn kotlin_parser() -> tree_sitter::Parser {
         let mut parser = tree_sitter::Parser::new();
         parser
             .set_language(&super::LANGUAGE.into())
             .expect("Error loading Kotlin parser");
         parser
+    }
+
+    /// True when `text` parses without error to a single `identifier` that covers all of it.
+    fn is_lone_identifier(parser: &mut tree_sitter::Parser, text: &str) -> bool {
+        let tree = parser.parse(text, None).expect("a tree");
+        let root = tree.root_node();
+        !root.has_error() && root.child_count() == 1 && {
+            let child = root.child(0).expect("a child");
+            child.kind() == "identifier" && child.start_byte() == 0 && child.end_byte() == text.len()
+        }
     }
 
     fn find<'tree>(node: tree_sitter::Node<'tree>, kind: &str) -> Option<tree_sitter::Node<'tree>> {
@@ -158,6 +212,55 @@ mod tests {
             }
         }
         parts
+    }
+
+    /// The text of every node of `kind` in `source`, in order.
+    fn texts_of_kind(source: &str, kind: &str) -> Vec<String> {
+        let tree = kotlin_parser().parse(source, None).expect("a tree");
+        assert!(!tree.root_node().has_error(), "parse error in {source:?}");
+        let mut texts = Vec::new();
+        let mut cursor = tree.walk();
+        'walk: loop {
+            let node = cursor.node();
+            if node.kind() == kind {
+                texts.push(source[node.byte_range()].to_string());
+            }
+            if cursor.goto_first_child() {
+                continue;
+            }
+            while !cursor.goto_next_sibling() {
+                if !cursor.goto_parent() {
+                    break 'walk;
+                }
+            }
+        }
+        texts
+    }
+
+    /// The corpus compares the shape of a tree, so a name that was read in two pieces would still pass there. This
+    /// compares text: a name written with CJK ideographs, Hangul, a supplementary-plane letter or a digit of another
+    /// script is one `identifier` in a declaration, a reference and a template, and one `label` before a loop.
+    #[test]
+    fn a_name_written_in_other_scripts_is_read_whole() {
+        let source = "class 名前(val 値: Int)\nfun 한글(변수: Int) = 𠮷野家\nval x١ = 𝒜名前２\n名前@ for (i in 0..1) {}\n";
+        assert_eq!(
+            texts_of_kind(source, "identifier"),
+            ["名前", "値", "Int", "한글", "변수", "Int", "𠮷野家", "x١", "𝒜名前２", "i"]
+        );
+        assert_eq!(texts_of_kind(source, "label"), ["名前@"]);
+
+        let parts = string_parts("val a = $$\"x $$名前 $$𠮷野家 $${値} $名前 $$。 y\"\n");
+        let expected = [
+            ("string_content", "x "),
+            ("interpolation", "$$名前"),
+            ("string_content", " "),
+            ("interpolation", "$$𠮷野家"),
+            ("string_content", " "),
+            ("interpolation", "$${値}"),
+            ("string_content", " $名前 $$。 y"),
+        ];
+        let expected: Vec<(String, String)> = expected.iter().map(|(kind, text)| (kind.to_string(), text.to_string())).collect();
+        assert_eq!(parts, expected);
     }
 
     /// With a prefix of n dollars only the last n dollars of a run start a template, and the dollars before them are
