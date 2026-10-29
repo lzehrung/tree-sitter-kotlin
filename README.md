@@ -1,47 +1,62 @@
-# tree-sitter-kotlin
+# tree-sitter-kotlin (codegraph fork)
 
-> **codegraph fork.** This is a fork of
-> [tree-sitter-grammars/tree-sitter-kotlin](https://github.com/tree-sitter-grammars/tree-sitter-kotlin)
-> that carries upstream fixes which are not merged or released yet, so that
-> [codegraph](https://github.com/lzehrung/codegraph) can build against a Kotlin grammar that parses one-line class bodies and
-> annotated declarations without ERROR nodes. Use the `codegraph` branch pinned by commit (`codegraph-forms` adds the fixes below
-> on top of it); `master` tracks upstream. The
-> Rust crate keeps the name and version `tree-sitter-kotlin-ng` 1.1.0, so it is a drop-in Cargo git dependency:
-> `tree-sitter-kotlin-ng = { git = "https://github.com/lzehrung/tree-sitter-kotlin", rev = "<commit>" }`.
->
-> Applied upstream pull requests (cherry-picked with their original authorship):
->
-> - [#11](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/11): automatic semicolon before a closing brace on the same line
-> - [#13](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/13): terminate class members before a declaration keyword on the same line
-> - [#21](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/21): a declaration under annotations is a declaration, not an `annotated_expression`
-> - [#14](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/14): stop the annotation scan at end of file (infinite loop)
-> - [#17](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/17): `where` as an ordinary identifier at statement start
-> - [#20](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/20): read whole identifiers when checking for keywords after a newline
-> - [#24](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/24): a call after a local property is not an accessor
->
-> Not applied: #16 (conflicts with #14 in the scanner), #18 (same fix as #14), and the larger grammar changes (#5, #7, #15, #22).
-> #23 is not applied either; `codegraph-forms` parses multi-dollar strings with its own change.
->
-> Fixes on `codegraph-forms` (written for this fork, each with a corpus test):
->
-> - a primary constructor on the line after a class header, also with `private`, `internal actual` or an annotation before it
-> - an annotated accessor after a property without a type
-> - `dynamic`, `final` and `override` as identifiers, and `by` as a name at the start of a statement
-> - multi-dollar string literals (`$$"..."`, `$$"""..."""`): the new node `multi_dollar_string_literal` has `string_content`,
->   `escape_sequence` and `interpolation` children like the other strings. Only as many dollars in a row as the prefix has start a
->   template (`$$name`, `$${expr}`), fewer are text. The scanner keeps the dollar count of each open string as state.
->   The dollars before the last ones of a longer run are text too. The scanner returns the first of them as one token and the
->   others as the next one (their number is part of its state), so a run of n dollars, or of quotes before the end of a
->   triple-quoted string, takes time linear in n.
->   A template name starts with a letter, `_`, or is a quoted name (`` $$`my name` ``) that closes on the line, as in Kotlin; raw
->   strings with one dollar use the same rule. The letters come from a table in `src/scanner.c` that `cargo test` checks against
->   the generated lexer. That lexer, written by tree-sitter-cli 0.24.6, reads no CJK ideograph or Hangul syllable except the end
->   points of their ranges and no letter above U+10915, so those are not identifiers or template names here.
-> - a trailing comma in an index expression, and an empty collection literal `[]`
-> - a NUL character inside a block comment
->
-> `src/parser.c` is generated with `npx tree-sitter-cli@0.24.6 generate` (language ABI 14, the CLI that produced the upstream file),
-> so regenerating an unmodified checkout gives no diff. `npx tree-sitter-cli@0.24.6 test` runs the corpus in `test/corpus`.
+A fork of [tree-sitter-grammars/tree-sitter-kotlin](https://github.com/tree-sitter-grammars/tree-sitter-kotlin) with parser fixes that are not merged or released upstream. [codegraph](https://github.com/lzehrung/codegraph) builds its native Kotlin parser from it. The Rust crate keeps the name and version `tree-sitter-kotlin-ng` 1.1.0, so it is a drop-in Cargo git dependency.
+
+- `codegraph-main` is the default branch and carries every fix. `master` tracks upstream.
+- `codegraph`, `codegraph-forms` and `codegraph-forms-2` to `codegraph-forms-4` are earlier states of the same line, kept because codegraph pinned them. `codegraph-forms-5` is where `codegraph-main` starts.
+
+## How codegraph pins it
+
+`packages/codegraph-native/Cargo.toml` in codegraph pins one commit of `codegraph-main`, and its `Cargo.lock` records the same commit:
+
+```toml
+tree-sitter-kotlin-ng = { git = "https://github.com/lzehrung/tree-sitter-kotlin", rev = "<commit>" }
+```
+
+A commit that codegraph pinned stays reachable through a `codegraph-pin-<short sha>` tag (for example `codegraph-pin-20f0079b`) and through the `codegraph-forms-N` branches.
+
+## Applied upstream pull requests
+
+Cherry-picked with their original authorship:
+
+- [#11](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/11): automatic semicolon before a closing brace on the same line
+- [#13](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/13): terminate class members before a declaration keyword on the same line
+- [#21](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/21): a declaration under annotations is a declaration, not an `annotated_expression`
+- [#14](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/14): stop the annotation scan at end of file (infinite loop)
+- [#17](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/17): `where` as an ordinary identifier at statement start
+- [#20](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/20): read whole identifiers when checking for keywords after a newline
+- [#24](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/pull/24): a call after a local property is not an accessor
+
+Not applied: #16 (conflicts with #14 in the scanner), #18 (same fix as #14), #23 (multi-dollar strings are done below), and the larger grammar changes (#5, #7, #15, #22).
+
+## Fixes written for this fork
+
+Each has a corpus test in `test/corpus` or a test in `bindings/rust/lib.rs`.
+
+- a primary constructor on the line after a class header, also with `private`, `internal actual` or an annotation before it
+- an annotated accessor after a property without a type
+- `dynamic`, `final` and `override` as identifiers, and `by` as a name at the start of a statement
+- a trailing comma in an index expression, and an empty collection literal `[]`
+- a NUL character inside a block comment
+- multi-dollar string literals (`$$"..."`, `$$"""..."""`): the node `multi_dollar_string_literal` has `string_content`, `escape_sequence` and `interpolation` children, and only as many dollars in a row as the prefix has start a template (`$$name`, `$${expr}`)
+- a long run of dollars before a template, or of quotes before the end of a triple-quoted string, is read in linear time
+- a template name may start with any letter, with `_`, or be a quoted name (`` $$`my name` ``) that closes on the line, in raw strings with one dollar too
+- identifiers, labels and template names written with CJK ideographs, Hangul syllables and the letters above U+10915 are read: the parser is regenerated with a tree-sitter-cli whose Unicode tables are complete, and a label (`name@`) takes the same letters as an identifier
+- a name that starts with a keyword and goes on with a letter above ASCII at the start of a line (`in` and a CJK letter) is read the same on every platform, not by the C library's `iswalpha`
+
+## Regenerating
+
+`src/parser.c`, `src/grammar.json`, `src/node-types.json` and `src/tree_sitter/*.h` are generated by tree-sitter-cli 0.27.1 at language ABI 14, which the runtimes 0.24 (used by `cargo test`) and 0.27 (used by codegraph) both load:
+
+```sh
+npx --yes tree-sitter-cli@0.27.1 generate --abi 14
+npx --yes tree-sitter-cli@0.27.1 test
+cargo test
+```
+
+`.github/workflows/test.yml` runs the same steps on every push and pull request and fails when `src/` differs from the generated output. Do not regenerate with tree-sitter-cli 0.24.x: it resolves `\p{L}` from a table that lacks the inside of the CJK ideograph and Hangul ranges and everything above U+10915. The tables are complete from 0.25.
+
+A letter table in `src/scanner.c` has to list the letters the generated lexer reads. After the CLI or the grammar changes, `cargo test` compares the two and prints the rows to paste when they differ.
 
 [![CI][ci]](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/actions/workflows/ci.yml)
 [![discord][discord]](https://discord.gg/w7nTvsVJhm)

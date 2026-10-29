@@ -1,0 +1,38 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # The CLI that wrote src/. Keep it in step with package.json and the README.
+  TREE_SITTER_CLI_VERSION: 0.27.1
+
+jobs:
+  test:
+    name: Regenerate, corpus and Rust binding
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Regenerate the parser
+        run: npx --yes tree-sitter-cli@${TREE_SITTER_CLI_VERSION} generate --abi 14
+      - name: Check that src/ is what the CLI generates
+        run: |
+          if [ -n "$(git status --porcelain -- src)" ]; then
+            git status --short -- src
+            git diff --stat -- src
+            echo "::error::src/ differs from the output of tree-sitter generate --abi 14"
+            exit 1
+          fi
+      - name: Run the corpus tests
+        run: npx --yes tree-sitter-cli@${TREE_SITTER_CLI_VERSION} test
+      - name: Test the Rust binding
+        run: cargo test
