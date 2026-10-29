@@ -42,7 +42,7 @@ Each has a corpus test in `test/corpus` or a test in `bindings/rust/lib.rs`.
 - a long run of dollars before a template, or of quotes before the end of a triple-quoted string, is read in linear time
 - a template name may start with any letter, with `_`, or be a quoted name (`` $$`my name` ``) that closes on the line, in raw strings with one dollar too
 - identifiers, labels and template names written with CJK ideographs, Hangul syllables and the letters above U+10915 are read: the parser is regenerated with a tree-sitter-cli whose Unicode tables are complete, and a label (`name@`) takes the same letters as an identifier
-- a name that starts with a keyword and goes on with a letter above ASCII at the start of a line (`in` and a CJK letter) is read the same on every platform, not by the C library's `iswalpha`
+- a name that starts with a keyword and goes on with a letter or a decimal digit above ASCII at the start of a line (`in` and a CJK letter, `in` and an Arabic-Indic digit) is read the same on every platform and as the lexer reads it, not by the C library's `iswalpha`
 
 ## Regenerating
 
@@ -56,7 +56,7 @@ cargo test
 
 `.github/workflows/test.yml` runs the same steps on every push and pull request and fails when `src/` differs from the generated output. Do not regenerate with tree-sitter-cli 0.24.x: it resolves `\p{L}` from a table that lacks the inside of the CJK ideograph and Hangul ranges and everything above U+10915. The tables are complete from 0.25.
 
-A letter table in `src/scanner.c` has to list the letters the generated lexer reads. After the CLI or the grammar changes, `cargo test` compares the two and prints the rows to paste when they differ.
+The letter table and the digit table in `src/scanner.c` have to list the letters and the decimal digits the generated lexer reads in a name. After the CLI or the grammar changes, `cargo test` compares them with the lexer and prints the rows to paste when they differ.
 
 [![CI][ci]](https://github.com/tree-sitter-grammars/tree-sitter-kotlin/actions/workflows/ci.yml)
 [![discord][discord]](https://discord.gg/w7nTvsVJhm)

@@ -27,11 +27,13 @@ enum TokenType {
 #define MAX_WORD_SIZE 16
 #define MAX_WORDS 16
 
-// Where a name ends has to be the same on every platform. `iswalpha` and `iswalnum` are not the same everywhere: the C
-// library and its locale decide, and Windows cuts a character above U+FFFF to 16 bits. A name that starts with a
-// keyword and goes on with a letter above ASCII (`in` and a CJK letter) at the start of a line was a call on Windows
-// but the keyword on Linux. Names are read with the letter table below instead.
+// Where a name ends has to be the same on every platform, so the scanner does not ask the C library (`iswalpha`,
+// `iswalnum`, `iswdigit`): the answer depends on the library and its locale, and Windows cuts a character above U+FFFF
+// to 16 bits. A name that starts with a keyword and goes on with a letter above ASCII (`in` and a CJK letter) at the
+// start of a line was a call on Windows but the keyword on Linux. A name is read as the lexer reads it, with the letter
+// and digit tables below: a letter starts it, and a letter, a decimal digit (category Nd) or `_` goes on with it.
 static inline bool is_name_letter(int32_t c);
+static inline bool is_name_digit(int32_t c);
 static inline bool is_name_character(int32_t c);
 
 static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
@@ -53,15 +55,15 @@ static bool scan_words(TSLexer *lexer, const char words[MAX_WORDS][MAX_WORD_SIZE
     if (!scanned_word[0]) {
         for (uint8_t i = 0; i < MAX_WORD_SIZE - 1; i++) {
             // Read the whole identifier (letters, digits, `_`), so that `in1`, `open_file`, `set_value` or `in` with a
-            // letter above ASCII after it are not mistaken for the keywords `in`, `open` or `set`.
+            // letter or a decimal digit above ASCII after it are not mistaken for the keywords `in`, `open` or `set`.
             const int32_t c = lexer->lookahead;
-            if (!(is_name_letter(c) || (i > 0 && ((c >= '0' && c <= '9') || c == '_')))) {
+            if (!(is_name_letter(c) || (i > 0 && (is_name_digit(c) || c == '_')))) {
                 if (i == 0) {
                     return false;
                 }
                 break;
             }
-            // A letter above ASCII is part of the name and of no keyword.
+            // A letter or a digit above ASCII is part of the name and of no keyword.
             scanned_word[i] = c < 0x80 ? (char)c : '\x7f';
             skip(lexer);
         }
@@ -175,11 +177,11 @@ void tree_sitter_kotlin_external_scanner_deserialize(void *payload, const char *
     }
 }
 
-// The letters above ASCII that start a template name: the characters the generated `identifier` token accepts as
-// its first character, read from the lexer in parser.c one code point at a time. That is the Unicode letter class
-// (categories Lu, Ll, Lt, Lm and Lo, Unicode 16.0 for tree-sitter-cli 0.27.1), which is what the Kotlin lexer reads.
-// `cargo test` checks the table against the lexer and prints a replacement when they differ, as after an update of
-// the CLI. ASCII is handled in `is_identifier_start`.
+// The letters above ASCII that start a name: the characters the generated `identifier` token accepts as its first
+// character, read from the lexer in parser.c one code point at a time. That is the Unicode letter class (categories
+// Lu, Ll, Lt, Lm and Lo, Unicode 16.0 for tree-sitter-cli 0.27.1), which is what the Kotlin lexer reads. `cargo test`
+// checks the table against the lexer and prints a replacement when they differ, as after an update of the CLI. ASCII
+// is handled in `is_name_letter`.
 // BEGIN LETTER RANGES
 static const uint32_t LETTER_RANGES[][2] = {
     {0xaa, 0xaa}, {0xb5, 0xb5}, {0xba, 0xba}, {0xc0, 0xd6}, {0xd8, 0xf6},
@@ -320,20 +322,51 @@ static const uint32_t LETTER_RANGES[][2] = {
 };
 // END LETTER RANGES
 
-static bool is_letter(uint32_t c) {
+// The decimal digits above ASCII (category Nd) that go on with a name and never start one: the characters the generated
+// `identifier` token accepts after its first character and not as its first, read from the lexer the same way and
+// checked by `cargo test` the same way. ASCII digits are handled in `is_name_digit`.
+// BEGIN DIGIT RANGES
+static const uint32_t DIGIT_RANGES[][2] = {
+    {0x660, 0x669}, {0x6f0, 0x6f9}, {0x7c0, 0x7c9}, {0x966, 0x96f}, {0x9e6, 0x9ef},
+    {0xa66, 0xa6f}, {0xae6, 0xaef}, {0xb66, 0xb6f}, {0xbe6, 0xbef}, {0xc66, 0xc6f},
+    {0xce6, 0xcef}, {0xd66, 0xd6f}, {0xde6, 0xdef}, {0xe50, 0xe59}, {0xed0, 0xed9},
+    {0xf20, 0xf29}, {0x1040, 0x1049}, {0x1090, 0x1099}, {0x17e0, 0x17e9}, {0x1810, 0x1819},
+    {0x1946, 0x194f}, {0x19d0, 0x19d9}, {0x1a80, 0x1a89}, {0x1a90, 0x1a99}, {0x1b50, 0x1b59},
+    {0x1bb0, 0x1bb9}, {0x1c40, 0x1c49}, {0x1c50, 0x1c59}, {0xa620, 0xa629}, {0xa8d0, 0xa8d9},
+    {0xa900, 0xa909}, {0xa9d0, 0xa9d9}, {0xa9f0, 0xa9f9}, {0xaa50, 0xaa59}, {0xabf0, 0xabf9},
+    {0xff10, 0xff19}, {0x104a0, 0x104a9}, {0x10d30, 0x10d39}, {0x10d40, 0x10d49}, {0x11066, 0x1106f},
+    {0x110f0, 0x110f9}, {0x11136, 0x1113f}, {0x111d0, 0x111d9}, {0x112f0, 0x112f9}, {0x11450, 0x11459},
+    {0x114d0, 0x114d9}, {0x11650, 0x11659}, {0x116c0, 0x116c9}, {0x116d0, 0x116e3}, {0x11730, 0x11739},
+    {0x118e0, 0x118e9}, {0x11950, 0x11959}, {0x11bf0, 0x11bf9}, {0x11c50, 0x11c59}, {0x11d50, 0x11d59},
+    {0x11da0, 0x11da9}, {0x11f50, 0x11f59}, {0x16130, 0x16139}, {0x16a60, 0x16a69}, {0x16ac0, 0x16ac9},
+    {0x16b50, 0x16b59}, {0x16d70, 0x16d79}, {0x1ccf0, 0x1ccf9}, {0x1d7ce, 0x1d7ff}, {0x1e140, 0x1e149},
+    {0x1e2f0, 0x1e2f9}, {0x1e4f0, 0x1e4f9}, {0x1e5f1, 0x1e5fa}, {0x1e950, 0x1e959}, {0x1fbf0, 0x1fbf9},
+};
+// END DIGIT RANGES
+
+// Whether `c` is in one of the sorted, disjoint, inclusive ranges.
+static bool in_ranges(const uint32_t (*ranges)[2], size_t count, uint32_t c) {
     size_t low = 0;
-    size_t high = sizeof(LETTER_RANGES) / sizeof(LETTER_RANGES[0]);
+    size_t high = count;
     while (low < high) {
         const size_t middle = low + (high - low) / 2;
-        if (c < LETTER_RANGES[middle][0]) {
+        if (c < ranges[middle][0]) {
             high = middle;
-        } else if (c > LETTER_RANGES[middle][1]) {
+        } else if (c > ranges[middle][1]) {
             low = middle + 1;
         } else {
             return true;
         }
     }
     return false;
+}
+
+static bool is_letter(uint32_t c) {
+    return in_ranges(LETTER_RANGES, sizeof(LETTER_RANGES) / sizeof(LETTER_RANGES[0]), c);
+}
+
+static bool is_digit(uint32_t c) {
+    return in_ranges(DIGIT_RANGES, sizeof(DIGIT_RANGES) / sizeof(DIGIT_RANGES[0]), c);
 }
 
 // An ASCII letter or a letter above ASCII. It gives the same answer on every platform, which `iswalpha` does not.
@@ -344,9 +377,16 @@ static inline bool is_name_letter(int32_t c) {
     return is_letter((uint32_t)c);
 }
 
-// An ASCII letter or digit, or a letter above ASCII; `_` is for the caller to test. A digit of another script is not
-// one of them.
-static inline bool is_name_character(int32_t c) { return is_name_letter(c) || (c >= '0' && c <= '9'); }
+// An ASCII digit or a decimal digit above ASCII. It goes on with a name and never starts one.
+static inline bool is_name_digit(int32_t c) {
+    if (c < 0x80) {
+        return c >= '0' && c <= '9';
+    }
+    return is_digit((uint32_t)c);
+}
+
+// A character that can be in a name after its first: a letter or a decimal digit. `_` is for the caller to test.
+static inline bool is_name_character(int32_t c) { return is_name_letter(c) || is_name_digit(c); }
 
 // The first character of a name after the dollars of a template: `_` or a letter.
 static inline bool is_identifier_start(int32_t c) { return c == '_' || is_name_letter(c); }

@@ -1304,3 +1304,127 @@ fun f(x: Int) {
           (value_arguments
             (value_argument
               (identifier))))))))
+
+==========================================================================
+Names that start with a keyword and go on with a decimal digit above ASCII
+==========================================================================
+
+fun f(x: Int) {
+  val a = x
+  in١(a)
+  as٣(a)
+  by१(a)
+  else１(a)
+  where𝟎(a)
+  constructor१(a)
+  instanceof１(a)
+  g(a)
+}
+
+class C {
+  val p = a val١ b
+}
+
+fun g(x: Int) = when (x) {
+  in١ -> 1
+  else -> 2
+}
+
+fun h() = when {
+  !is१ -> 1
+  else -> 2
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (user_type
+          (identifier))))
+    (function_body
+      (block
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (identifier))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier)))))))
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (infix_expression
+          (identifier)
+          (identifier)
+          (identifier)))))
+  (function_declaration
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (user_type
+          (identifier))))
+    (function_body
+      (when_expression
+        (when_subject
+          (identifier))
+        (when_entry
+          (identifier)
+          (number_literal))
+        (when_entry
+          (number_literal)))))
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (when_expression
+        (when_entry
+          (unary_expression
+            (identifier))
+          (number_literal))
+        (when_entry
+          (number_literal))))))

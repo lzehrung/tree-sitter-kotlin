@@ -48,11 +48,11 @@ mod tests {
             .expect("Error loading Kotlin parser");
     }
 
-    /// The ranges in the `LETTER_RANGES` table of `src/scanner.c`.
-    fn scanner_letter_ranges() -> Vec<(u32, u32)> {
+    /// The ranges in the table of `src/scanner.c` between `// BEGIN <name> RANGES` and `// END <name> RANGES`.
+    fn scanner_table_ranges(name: &str) -> Vec<(u32, u32)> {
         let scanner = include_str!("../../src/scanner.c");
-        let begin = scanner.find("// BEGIN LETTER RANGES").expect("table start marker");
-        let end = scanner.find("// END LETTER RANGES").expect("table end marker");
+        let begin = scanner.find(&format!("// BEGIN {name} RANGES")).expect("table start marker");
+        let end = scanner.find(&format!("// END {name} RANGES")).expect("table end marker");
         let mut ranges = Vec::new();
         let mut rest = &scanner[begin..end];
         while let Some(open) = rest.find("{0x") {
@@ -66,29 +66,38 @@ mod tests {
         ranges
     }
 
-    /// The scanner decides from its own table whether a name starts after the dollars of a template in a
-    /// multi-dollar string, and the grammar's `identifier` token then has to read the name. A letter the table
-    /// lacks hides a template, and a letter in the table that the lexer does not read leaves a parse error after the
-    /// template start. So the table must be exactly the characters above ASCII that the generated lexer accepts as
-    /// the first character of an `identifier`. This reads them out of the lexer one code point at a time.
-    #[test]
-    fn scanner_letter_table_matches_the_lexer() {
-        let mut parser = kotlin_parser();
-        let mut lexed: Vec<(u32, u32)> = Vec::new();
-        let mut buffer = [0u8; 4];
-        for code_point in 0x80u32..=0x10FFFF {
-            let Some(character) = char::from_u32(code_point) else {
-                continue;
-            };
-            if is_lone_identifier(&mut parser, character.encode_utf8(&mut buffer)) {
-                match lexed.last_mut() {
+    /// The characters above ASCII that the generated lexer reads in a name, found by parsing each code point one at a
+    /// time: those that start a name (letters), and those that only go on with one (decimal digits). They are found
+    /// once, because two tests compare them with the tables of the scanner.
+    fn lexer_name_characters() -> &'static (Vec<(u32, u32)>, Vec<(u32, u32)>) {
+        static CHARACTERS: std::sync::OnceLock<(Vec<(u32, u32)>, Vec<(u32, u32)>)> = std::sync::OnceLock::new();
+        CHARACTERS.get_or_init(|| {
+            fn push(ranges: &mut Vec<(u32, u32)>, code_point: u32) {
+                match ranges.last_mut() {
                     Some(last) if last.1 + 1 == code_point => last.1 = code_point,
-                    _ => lexed.push((code_point, code_point)),
+                    _ => ranges.push((code_point, code_point)),
                 }
             }
-        }
+            let mut parser = kotlin_parser();
+            let (mut starts, mut goes_on) = (Vec::new(), Vec::new());
+            let mut buffer = [0u8; 4];
+            for code_point in 0x80u32..=0x10FFFF {
+                let Some(character) = char::from_u32(code_point) else {
+                    continue;
+                };
+                if is_lone_identifier(&mut parser, character.encode_utf8(&mut buffer)) {
+                    push(&mut starts, code_point);
+                } else if is_lone_identifier(&mut parser, &format!("a{character}")) {
+                    push(&mut goes_on, code_point);
+                }
+            }
+            (starts, goes_on)
+        })
+    }
 
-        let table = scanner_letter_ranges();
+    /// Fails with the rows to paste into the table when it is not the characters the lexer reads.
+    fn assert_scanner_table_matches(name: &str, lexed: &[(u32, u32)]) {
+        let table = scanner_table_ranges(name);
         if table != lexed {
             let rows: Vec<String> = lexed
                 .chunks(5)
@@ -98,12 +107,30 @@ mod tests {
                 })
                 .collect();
             panic!(
-                "LETTER_RANGES in src/scanner.c does not match the lexer ({} ranges in the table, {} in the lexer). Replace its rows with:\n{}",
+                "{name}_RANGES in src/scanner.c does not match the lexer ({} ranges in the table, {} in the lexer). Replace its rows with:\n{}",
                 table.len(),
                 lexed.len(),
                 rows.join("\n")
             );
         }
+    }
+
+    /// The scanner decides from its own tables where a name starts after the dollars of a template in a multi-dollar
+    /// string, and where a name ends after a keyword, and the grammar's `identifier` token reads the same name. A letter
+    /// the table lacks hides a template or ends a name early, and a letter in the table that the lexer does not read
+    /// leaves a parse error after a template start. So the table must be exactly the characters above ASCII that the
+    /// generated lexer accepts as the first character of an `identifier`.
+    #[test]
+    fn scanner_letter_table_matches_the_lexer() {
+        assert_scanner_table_matches("LETTER", &lexer_name_characters().0);
+    }
+
+    /// A decimal digit (category Nd) above ASCII goes on with a name but does not start one, so the digit table must be
+    /// exactly the characters above ASCII that the lexer accepts after the first character of an `identifier` and not as
+    /// its first. A keyword followed by one is a longer name, not the keyword.
+    #[test]
+    fn scanner_digit_table_matches_the_lexer() {
+        assert_scanner_table_matches("DIGIT", &lexer_name_characters().1);
     }
 
     /// tree-sitter-cli 0.24 resolved `\p{L}` from a table that kept only the first and last code point of the
@@ -261,6 +288,40 @@ mod tests {
         ];
         let expected: Vec<(String, String)> = expected.iter().map(|(kind, text)| (kind.to_string(), text.to_string())).collect();
         assert_eq!(parts, expected);
+    }
+
+    /// A name that starts with a keyword and goes on with another character of a name is a call on a new statement, not
+    /// the keyword that continues the statement above. The scanner reads the word with its letter and digit tables, so
+    /// this checks both tables through the scanner, for each keyword it compares the start of a line with: the first and
+    /// the last letter of every range of the letter table, and every decimal digit above ASCII.
+    #[test]
+    fn a_keyword_followed_by_a_letter_or_a_decimal_digit_above_ascii_is_one_name() {
+        let keywords = ["else", "in", "instanceof", "get", "set", "constructor", "by", "as", "where"];
+        let mut characters: Vec<u32> = Vec::new();
+        for (first, last) in scanner_table_ranges("LETTER") {
+            characters.extend([first, last]);
+        }
+        for (first, last) in scanner_table_ranges("DIGIT") {
+            characters.extend(first..=last);
+        }
+        let mut parser = kotlin_parser();
+        for code_point in characters {
+            let character = char::from_u32(code_point).expect("a scalar value");
+            for keyword in keywords {
+                let name = format!("{keyword}{character}");
+                let source = format!("fun f(x: Int) {{\n  val a = x\n  {name}(a)\n  g(a)\n}}\n");
+                let tree = parser.parse(&source, None).expect("a tree");
+                let root = tree.root_node();
+                assert!(!root.has_error(), "parse error in {source:?}: {}", root.to_sexp());
+                let block = find(root, "block").expect("a block");
+                let mut cursor = block.walk();
+                let statements: Vec<String> = block
+                    .named_children(&mut cursor)
+                    .map(|statement| source[statement.byte_range()].to_string())
+                    .collect();
+                assert_eq!(statements, ["val a = x".to_string(), format!("{name}(a)"), "g(a)".to_string()], "{source:?}");
+            }
+        }
     }
 
     /// With a prefix of n dollars only the last n dollars of a run start a template, and the dollars before them are
